@@ -43,6 +43,24 @@ comptes à deux endroits est une source de désynchronisation.
 notre API. C'est ce qui permet aux formules de calcul de rester sur le serveur
 (cf. D-007).
 
+### D-002b — On passe par le *pooler*, pas par la connexion directe
+
+**Mesuré le 2026-08-09 sur le poste du propriétaire**, projet
+`vkfaeyfwxjgfzmsinmoq` : l'hôte de connexion directe
+`db.<projet>.supabase.co` ne publie **qu'une adresse IPv6**, et le réseau
+utilisé n'a pas d'IPv6 — la connexion échoue. L'hôte du pooler
+(`aws-0-<région>.pooler.supabase.com`, port 6543) répond en IPv4.
+
+**Choisi :** `DATABASE_URL` pointe sur le **pooler en mode transaction**.
+`DIRECT_DATABASE_URL` reste disponible mais commentée : elle ne servira que
+depuis un réseau disposant d'IPv6, ou si l'option IPv4 payante de Supabase est
+souscrite.
+
+**Conséquence à connaître :** le pooler en mode transaction ne supporte pas les
+requêtes préparées nommées. Notre code n'en utilise aucune, et un commentaire en
+tête de `backend/src/db/pool.ts` explique ce qui casserait si quelqu'un en
+introduisait une.
+
 
 
 **Choisi :** driver `pg` (node-postgres) + un runner de migrations maison qui
