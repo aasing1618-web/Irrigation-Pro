@@ -8,12 +8,15 @@
  */
 
 import { NavLink } from 'react-router';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { useAuth } from '../auth/AuthProvider';
 import { cn } from '../lib/cn';
 import { APP_VERSION } from '../lib/version';
+import { Button } from './Button';
 import {
   CalculationsIcon,
   DashboardIcon,
+  LogoutIcon,
   ProjectsIcon,
   ReportsIcon,
   SettingsIcon,
@@ -32,7 +35,7 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/projets', label: 'Projets', icon: <ProjectsIcon />, upcoming: true },
   { to: '/calculs', label: 'Calculs', icon: <CalculationsIcon />, upcoming: true },
   { to: '/rapports', label: 'Rapports', icon: <ReportsIcon />, upcoming: true },
-  { to: '/parametres', label: 'Paramètres', icon: <SettingsIcon />, upcoming: true },
+  { to: '/parametres', label: 'Paramètres', icon: <SettingsIcon /> },
 ];
 
 export function Sidebar() {
@@ -96,12 +99,52 @@ export function Sidebar() {
         ))}
       </ul>
 
-      <footer className="mt-6 border-t border-white/8 px-5 py-4">
-        <p className="text-xs text-brand-300" data-numeric>
-          Version {APP_VERSION}
+      <footer className="mt-6 border-t border-white/8 px-4 py-4">
+        <AccountBlock />
+        <p className="mt-4 px-1 text-2xs text-brand-400" data-numeric>
+          Version {APP_VERSION} · Poste Windows
         </p>
-        <p className="mt-0.5 text-2xs text-brand-400">Poste Windows</p>
       </footer>
     </nav>
+  );
+}
+
+/**
+ * Qui est connecté, et comment partir.
+ *
+ * Le nom est affiché en clair : sur un poste partagé par un bureau d'études,
+ * savoir sous quel compte on travaille évite de créer un projet au mauvais
+ * endroit.
+ */
+function AccountBlock() {
+  const { user, logout } = useAuth();
+  const [pending, setPending] = useState(false);
+
+  if (!user) return null;
+
+  return (
+    <div>
+      <p className="truncate px-1 text-sm font-medium text-white" title={user.fullName}>
+        {user.fullName}
+      </p>
+      <p className="mt-0.5 truncate px-1 text-2xs text-brand-400" title={user.email}>
+        {user.email}
+      </p>
+
+      <Button
+        variant="onDark"
+        size="sm"
+        icon={<LogoutIcon />}
+        className="mt-3 w-full"
+        loading={pending}
+        loadingLabel="Déconnexion en cours"
+        onClick={() => {
+          setPending(true);
+          void logout().finally(() => setPending(false));
+        }}
+      >
+        Se déconnecter
+      </Button>
+    </div>
   );
 }

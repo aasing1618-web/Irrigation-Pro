@@ -8,8 +8,9 @@
  *   2. `toPublicUser()` retire l'empreinte du mot de passe avant tout envoi
  *      vers l'API : c'est cette forme-là qui doit sortir du backend.
  *
- * Squelette de Vague 0 : les fonctions existent et sont typées, elles seront
- * appelées par les Vagues 1 (connexion) et 3 (dashboard admin).
+ * Ce dépôt fournit l'accès aux données. Il ne contient AUCUNE décision
+ * d'authentification : c'est `auth/` qui décide s'il faut verrouiller un
+ * compte, à partir de combien de tentatives, et pour combien de temps.
  */
 
 import type { Executor } from '../executor.js';
@@ -77,10 +78,17 @@ export function toPublicUser(user: UserRow): PublicUser {
 // Lectures
 // ---------------------------------------------------------------------------
 
-/** Recherche un compte par e-mail, sans tenir compte de la casse. */
-export async function findUserByEmail(email: string, client?: Executor): Promise<UserRow | null> {
+/**
+ * Recherche un compte par e-mail, sans tenir compte de la casse.
+ *
+ * La comparaison porte sur `lower(email)` des DEUX côtés : c'est exactement
+ * l'expression de l'index unique `users_email_unique_idx` créé en migration
+ * 001, donc PostgreSQL utilise cet index au lieu de parcourir la table.
+ * Écrire `email ILIKE $1` donnerait le même résultat mais serait lent.
+ */
+export async function findUserByEmail(email: string): Promise<UserRow | null> {
   const { rows } = await run<UserRow>(
-    client,
+    undefined,
     `SELECT ${USER_COLUMNS} FROM users WHERE lower(email) = lower($1)`,
     [email],
   );
@@ -88,9 +96,9 @@ export async function findUserByEmail(email: string, client?: Executor): Promise
 }
 
 /** Recherche un compte par identifiant. */
-export async function findUserById(id: string, client?: Executor): Promise<UserRow | null> {
+export async function findUserById(id: string): Promise<UserRow | null> {
   const { rows } = await run<UserRow>(
-    client,
+    undefined,
     `SELECT ${USER_COLUMNS} FROM users WHERE id = $1`,
     [id],
   );
@@ -118,18 +126,37 @@ export async function countUsers(client?: Executor): Promise<number> {
   return Number(rows[0]?.total ?? 0);
 }
 
+/**
+ * Nombre de comptes administrateur, tous statuts confondus.
+ *
+ * Utilisé par la commande `npm run creer-admin`, qui refuse de créer un second
+ * administrateur sans `--force`. On compte AUSSI les administrateurs suspendus :
+ * un compte suspendu peut être réactivé, il existe donc bel et bien.
+ *
+ * `count(*)` renvoie un `bigint`, que le driver `pg` remonte en chaîne pour ne
+ * pas perdre de précision : on le convertit explicitement en texte puis en
+ * nombre plutôt que de dépendre du comportement par défaut.
+ */
+export async function countAdmins(): Promise<number> {
+  const { rows } = await run<{ total: string }>(
+    undefined,
+    `SELECT count(*)::text AS total FROM users WHERE role = 'ADMIN'`,
+  );
+  return Number(rows[0]?.total ?? 0);
+}
+
 // ---------------------------------------------------------------------------
 // Écritures
 // ---------------------------------------------------------------------------
 
 /**
  * Crée un compte. Réservé à l'administrateur (il n'y a pas d'inscription libre).
- * `must_change_password` reste à `true` : le client devra remplacer le mot de
- * passe temporaire à sa première connexion.
+ * `must_change_password` reste à `true` (valeur par défaut de la colonne) : le
+ * client devra remplacer le mot de passe temporaire à sa première connexion.
  */
-export async function createUser(input: CreateUserInput, client?: Executor): Promise<UserRow> {
+export async function createUser(input: CreateUserInput): Promise<UserRow> {
   const { rows } = await run<UserRow>(
-    client,
+    undefined,
     `INSERT INTO users (email, password_hash, full_name, company, role, created_by)
      VALUES ($1, $2, $3, $4, $5, $6)
      RETURNING ${USER_COLUMNS}`,
@@ -148,27 +175,90 @@ export async function createUser(input: CreateUserInput, client?: Executor): Pro
 }
 
 /**
- * Remplace l'empreinte du mot de passe et lève l'obligation de changement.
- * Utilisé au premier changement de mot de passe, et lors d'une réinitialisation.
+ * Tentative de connexion ÉCHOUÉE : incrémente le compteur et renvoie sa
+ * nouvelle valeur.
+ *
+ * ═══════════════════════════════════════════════════════════════════════
+ *  POURQUOI UN SEUL `UPDATE … RETURNING` ET PAS UN `SELECT` PUIS UN `UPDATE`
+ * ═══════════════════════════════════════════════════════════════════════
+ *  Un attaquant peut envoyer dix tentatives EN MÊME TEMPS. Si l'on lisait
+ *  le compteur, puis qu'on écrivait `compteur + 1`, les dix requêtes
+ *  liraient la même valeur et écriraient toutes le même résultat : le
+ *  compteur avancerait de 1 au lieu de 10, et le verrouillage anti
+ *  brute-force serait contournable en parallélisant les essais.
+ *
+ *  Ici, `failed_login_attempts = failed_login_attempts + 1` est évalué par
+ *  PostgreSQL lui-même : chaque UPDATE verrouille la ligne, attend son tour
+ *  et repart de la valeur réellement à jour. Le compteur est exact même
+ *  sous attaque, et `RETURNING` nous donne la valeur qui vient d'être
+ *  écrite — celle sur laquelle `auth/` prendra sa décision.
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * @param lockUntil  Date de fin de verrouillage décidée par `auth/`, ou
+ *                   `null` pour ne PAS toucher au verrouillage en cours
+ *                   (`COALESCE` conserve alors la valeur existante — un
+ *                   verrou déjà posé ne doit jamais être levé par un échec).
+ * @returns Le nouveau compteur, ou `0` si l'identifiant n'existe pas.
  */
-export async function updatePasswordHash(
-  id: string,
-  passwordHash: string,
-  options: { mustChangePassword?: boolean } = {},
-  client?: Executor,
-): Promise<UserRow | null> {
-  const { rows } = await run<UserRow>(
-    client,
+export async function registerFailedLogin(
+  userId: string,
+  lockUntil: Date | null,
+): Promise<number> {
+  const { rows } = await run<{ failed_login_attempts: number }>(
+    undefined,
     `UPDATE users
-        SET password_hash = $2,
-            must_change_password = $3,
-            failed_login_attempts = 0,
-            locked_until = NULL
+        SET failed_login_attempts = failed_login_attempts + 1,
+            locked_until          = COALESCE($2::timestamptz, locked_until)
       WHERE id = $1
-      RETURNING ${USER_COLUMNS}`,
-    [id, passwordHash, options.mustChangePassword ?? false],
+      RETURNING failed_login_attempts`,
+    [userId, lockUntil],
   );
-  return rows[0] ?? null;
+  return rows[0]?.failed_login_attempts ?? 0;
+}
+
+/**
+ * Tentative de connexion RÉUSSIE : horodate la connexion, remet le compteur
+ * d'échecs à zéro et lève tout verrouillage temporaire en cours.
+ *
+ * Un verrouillage n'est PAS une suspension : il disparaît dès que le client
+ * retrouve son mot de passe, et le propriétaire n'a rien à faire.
+ */
+export async function registerSuccessfulLogin(userId: string): Promise<void> {
+  await run(
+    undefined,
+    `UPDATE users
+        SET last_login_at         = now(),
+            failed_login_attempts = 0,
+            locked_until          = NULL
+      WHERE id = $1`,
+    [userId],
+  );
+}
+
+/**
+ * Remplace l'empreinte du mot de passe.
+ *
+ * Effets de bord volontaires, tous nécessaires :
+ *   * `must_change_password` passe à `false` — c'est le seul chemin de sortie
+ *     de l'écran de changement obligatoire imposé à la première connexion ;
+ *   * le compteur d'échecs et le verrouillage sont remis à zéro : le mot de
+ *     passe ayant changé, les anciens échecs n'ont plus de sens.
+ *
+ * La révocation des sessions longues (exigée par le contrat d'API) n'est PAS
+ * faite ici : elle relève de `refresh-tokens.repo.ts` (`revokeAllUserTokens`),
+ * et c'est `auth/` qui enchaîne les deux.
+ */
+export async function updatePassword(userId: string, passwordHash: string): Promise<void> {
+  await run(
+    undefined,
+    `UPDATE users
+        SET password_hash         = $2,
+            must_change_password  = false,
+            failed_login_attempts = 0,
+            locked_until          = NULL
+      WHERE id = $1`,
+    [userId, passwordHash],
+  );
 }
 
 /** Bascule un compte en ACTIF ou SUSPENDU (seul contrôle d'accès du produit). */
@@ -185,40 +275,9 @@ export async function updateUserStatus(
   return rows[0] ?? null;
 }
 
-/** Connexion réussie : horodatage et remise à zéro du compteur anti brute-force. */
-export async function markLoginSuccess(id: string, client?: Executor): Promise<void> {
-  await run(
-    client,
-    `UPDATE users
-        SET last_login_at = now(),
-            failed_login_attempts = 0,
-            locked_until = NULL
-      WHERE id = $1`,
-    [id],
-  );
-}
-
-/**
- * Connexion échouée : incrémente le compteur et renvoie sa nouvelle valeur.
- * C'est la couche `auth/` qui décide, à partir de ce nombre, s'il faut
- * verrouiller le compte (`lockUser`).
- */
-export async function markLoginFailure(id: string, client?: Executor): Promise<number> {
-  const { rows } = await run<{ failed_login_attempts: number }>(
-    client,
-    `UPDATE users
-        SET failed_login_attempts = failed_login_attempts + 1
-      WHERE id = $1
-      RETURNING failed_login_attempts`,
-    [id],
-  );
-  return rows[0]?.failed_login_attempts ?? 0;
-}
-
-/** Verrouille temporairement la connexion d'un compte (anti brute-force). */
-export async function lockUser(id: string, until: Date, client?: Executor): Promise<void> {
-  await run(client, 'UPDATE users SET locked_until = $2 WHERE id = $1', [id, until]);
-}
+// ---------------------------------------------------------------------------
+// Aide au calcul (fonction pure, sans accès à la base)
+// ---------------------------------------------------------------------------
 
 /** Un compte est-il actuellement verrouillé ? */
 export function isLocked(user: UserRow, now: Date = new Date()): boolean {

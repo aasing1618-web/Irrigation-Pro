@@ -1,17 +1,22 @@
 /**
  * Racine de l'application.
  *
- * Deux responsabilités, et rien d'autre :
- *   1. vérifier que le logiciel est correctement configuré (HTTPS obligatoire) ;
- *   2. établir la liaison avec le serveur avant de laisser entrer l'utilisateur.
+ * Elle enchaîne, toujours dans cet ordre :
+ *   1. configuration valide (HTTPS obligatoire) ;
+ *   2. liaison au serveur établie (écran de démarrage) ;
+ *   3. session en règle (connexion, puis changement de mot de passe si le
+ *      serveur l'exige) — c'est le rôle de `SessionGate` ;
+ *   4. l'application elle-même.
  *
- * Pas d'authentification ici : elle arrive en Vague 1 et viendra s'insérer
- * entre l'écran de démarrage et la coque applicative.
+ * Chaque étape est un barrage : la suivante n'est même pas rendue tant que la
+ * précédente n'est pas franchie.
  */
 
 import { useEffect, useState } from 'react';
 import { Route, Routes } from 'react-router';
 
+import { AuthProvider } from './auth/AuthProvider';
+import { SessionGate } from './auth/SessionGate';
 import { AppShell } from './components/AppShell';
 import { ConfigurationErrorScreen } from './components/ConfigurationErrorScreen';
 import { StartupScreen } from './components/StartupScreen';
@@ -72,20 +77,24 @@ function ConnectedApp() {
   }
 
   return (
-    <Routes>
-      <Route element={<AppShell connection={state} />}>
-        <Route
-          index
-          element={
-            <Dashboard connection={state} onRefresh={retry} isRefreshing={isRetrying} />
-          }
-        />
-        <Route path="projets" element={<Projects />} />
-        <Route path="calculs" element={<Calculations />} />
-        <Route path="rapports" element={<Reports />} />
-        <Route path="parametres" element={<Settings />} />
-        <Route path="*" element={<NotFound />} />
-      </Route>
-    </Routes>
+    <AuthProvider>
+      <SessionGate>
+        <Routes>
+          <Route element={<AppShell connection={state} />}>
+            <Route
+              index
+              element={
+                <Dashboard connection={state} onRefresh={retry} isRefreshing={isRetrying} />
+              }
+            />
+            <Route path="projets" element={<Projects />} />
+            <Route path="calculs" element={<Calculations />} />
+            <Route path="rapports" element={<Reports />} />
+            <Route path="parametres" element={<Settings />} />
+            <Route path="*" element={<NotFound />} />
+          </Route>
+        </Routes>
+      </SessionGate>
+    </AuthProvider>
   );
 }

@@ -6,13 +6,39 @@
  *   - l'adresse de base validée (HTTPS obligatoire hors développement local) ;
  *   - le délai d'expiration des requêtes ;
  *   - la normalisation des erreurs ;
- *   - (Vague 1) l'injection du jeton d'authentification.
+ *   - l'injection du jeton d'accès ;
+ *   - le rafraîchissement automatique de la session, et la fin de session.
  *
  * Rappel décision D-007 : aucune formule de calcul métier ne vit côté client.
  * Ce module envoie des paramètres et reçoit des résultats, rien de plus.
+ *
+ * ## Transport des jetons (D-005b — à conserver tel quel)
+ *
+ * Jeton d'accès dans l'en-tête `Authorization: Bearer …`, jeton de
+ * rafraîchissement dans le corps JSON de `/api/auth/login` et
+ * `/api/auth/refresh`. **Aucun cookie**, d'où le `credentials: 'omit'` :
+ * l'application est servie depuis `tauri://localhost` et appelle une autre
+ * origine ; un cookie y serait un cookie tierce-partie, soumis au bon vouloir
+ * de la WebView de Windows.
+ *
+ * ## Cycle d'import assumé
+ *
+ * `api.ts` ⇄ `auth-store.ts` s'importent mutuellement. C'est volontaire et sans
+ * danger : aucun des deux modules n'appelle l'autre pendant son évaluation,
+ * uniquement depuis le corps de fonctions. Le client HTTP a besoin de la
+ * session (jeton, rafraîchissement) et la session a besoin du client HTTP
+ * (login, refresh) — les séparer artificiellement coûterait plus cher en
+ * indirection que ce cycle ne coûte en lisibilité.
  */
 
 import { getConfig } from './config';
+import {
+  getAccessToken,
+  handleAuthenticationFailure,
+  handleSuspendedResponse,
+  markPasswordChangeRequired,
+  refreshAccessToken,
+} from './auth-store';
 
 /** Format d'erreur renvoyé par le backend. */
 interface BackendErrorBody {
@@ -75,6 +101,29 @@ export const ApiErrorCode = {
   UNKNOWN: 'UNKNOWN_ERROR',
 } as const;
 
+/** Codes d'erreur d'authentification définis par le contrat d'API. */
+export const AuthErrorCode = {
+  INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  ACCOUNT_SUSPENDED: 'ACCOUNT_SUSPENDED',
+  ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
+  PASSWORD_CHANGE_REQUIRED: 'PASSWORD_CHANGE_REQUIRED',
+  PASSWORD_TOO_WEAK: 'PASSWORD_TOO_WEAK',
+  PASSWORD_UNCHANGED: 'PASSWORD_UNCHANGED',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
+} as const;
+
+/**
+ * Comportement d'authentification d'une requête.
+ *
+ * - `required` (défaut) : joint le jeton, rafraîchit une fois sur `401`,
+ *   termine la session si le rafraîchissement échoue à son tour.
+ * - `none` : route publique (`login`, `refresh`) — aucun jeton, aucun effet de
+ *   session. L'appelant traite l'erreur lui-même.
+ * - `best-effort` : joint le jeton s'il existe, mais ne rafraîchit rien et ne
+ *   termine aucune session. Réservé à la déconnexion.
+ */
+export type AuthMode = 'required' | 'none' | 'best-effort';
+
 export interface RequestOptions {
   method?: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
   /** Corps de requête ; sérialisé en JSON automatiquement. */
@@ -83,6 +132,8 @@ export interface RequestOptions {
   signal?: AbortSignal;
   /** Surcharge ponctuelle du délai d'expiration. */
   timeoutMs?: number;
+  /** Voir `AuthMode`. */
+  auth?: AuthMode;
 }
 
 function asString(value: unknown, fallback: string): string {
@@ -107,6 +158,7 @@ function defaultMessageForStatus(status: number): string {
   if (status === 503) return "Le serveur d'Irrigation Pro est momentanément indisponible.";
   if (status === 401 || status === 403) return "Vous n'avez pas accès à cette ressource.";
   if (status === 404) return 'La ressource demandée est introuvable.';
+  if (status === 429) return 'Trop de tentatives. Veuillez patienter avant de réessayer.';
   if (status >= 500) return "Le serveur d'Irrigation Pro a rencontré un problème.";
   return 'La demande n’a pas pu être traitée.';
 }
@@ -180,76 +232,42 @@ function withTimeout(
   };
 }
 
+interface SendOptions {
+  url: string;
+  method: string;
+  /** Corps déjà sérialisé — identique entre la première tentative et la reprise. */
+  payload: string | undefined;
+  timeoutMs: number;
+  signal?: AbortSignal;
+}
+
 /**
- * Exécute un appel typé vers le backend.
+ * Un aller-retour réseau, sans aucune logique de session.
  *
- * `T` décrit la forme attendue de la réponse. Le client ne valide pas le schéma
- * en profondeur : chaque appelant reste responsable de lire défensivement les
- * champs optionnels.
+ * Renvoie la réponse brute, quel que soit son code. Seule l'impossibilité de
+ * joindre le serveur lève une `ApiError`.
  */
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const config = getConfig();
-  const { method = 'GET', body, signal, timeoutMs = config.requestTimeoutMs } = options;
+async function sendOnce(options: SendOptions, token: string | null): Promise<Response> {
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (options.payload !== undefined) headers['Content-Type'] = 'application/json';
+  // Le jeton d'accès est ajouté ICI, et nulle part ailleurs.
+  if (token) headers.Authorization = `Bearer ${token}`;
 
-  const url = `${config.apiUrl}${path.startsWith('/') ? path : `/${path}`}`;
+  const timeout = withTimeout(options.timeoutMs, options.signal);
 
-  const headers: Record<string, string> = {
-    Accept: 'application/json',
-  };
-  if (body !== undefined) {
-    headers['Content-Type'] = 'application/json';
-  }
-
-  // --- Vague 1 : authentification ------------------------------------------
-  // Contrat arrêté avec l'agent Backend — à appliquer tel quel, ne pas le
-  // rediscuter :
-  //
-  //   * Jeton d'accès (JWT, 15 min) : ajouté ICI, et nulle part ailleurs.
-  //       const token = getAccessToken();
-  //       if (token) headers.Authorization = `Bearer ${token}`;
-  //     Il vit UNIQUEMENT en mémoire — jamais sur le disque.
-  //
-  //   * Jeton de rafraîchissement (30 j) : transite dans le CORPS JSON de
-  //     POST /api/auth/login et POST /api/auth/refresh. Aucun cookie n'est
-  //     émis ni lu, d'où le `credentials: 'omit'` ci-dessous — l'application
-  //     est servie depuis `tauri://localhost` et appelle une API d'un autre
-  //     domaine : un cookie y serait un cookie tierce-partie, donc soumis au
-  //     bon vouloir de la WebView. À conserver.
-  //     C'est le seul secret de longue durée du logiciel : il doit être
-  //     rangé dans le stockage sécurisé de l'OS via Tauri, jamais dans
-  //     `localStorage`.
-  //     Ce rangement est un choix purement client — le serveur ne fait que
-  //     délivrer et accepter le jeton. Toute la Vague 1 (connexion, compte
-  //     SUSPENDU, mot de passe à changer, rafraîchissement, révocation) est
-  //     donc développable et testable en navigateur, avec un simple stockage
-  //     en mémoire derrière l'abstraction. Le plugin Rust ne comble qu'un
-  //     seul trou : « je relance le logiciel demain et je suis encore
-  //     connecté ». Il est requis pour LIVRER la Vague 1, pas pour la
-  //     développer.
-  //
-  //   * Sur 401 : UN SEUL essai de rafraîchissement, puis retour à l'écran de
-  //     connexion s'il échoue à son tour. Un compte passé SUSPENDU fait
-  //     échouer le rafraîchissement — c'est par ce chemin qu'une suspension
-  //     prend effet côté application, en 15 minutes au maximum.
-  //     Cette logique viendra s'insérer autour de l'appel `fetch` ci-dessous.
-  // -------------------------------------------------------------------------
-
-  const timeout = withTimeout(timeoutMs, signal);
-
-  let response: Response;
   try {
-    response = await fetch(url, {
-      method,
+    return await fetch(options.url, {
+      method: options.method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: options.payload,
       signal: timeout.signal,
-      // L'authentification passera par un en-tête, pas par un cookie.
+      // L'authentification passe par un en-tête, pas par un cookie.
       credentials: 'omit',
       cache: 'no-store',
     });
   } catch (cause) {
     if (timeout.timedOut()) {
-      console.error('[api] délai dépassé', { url, timeoutMs });
+      console.error('[api] délai dépassé', { url: options.url, timeoutMs: options.timeoutMs });
       throw new ApiError(
         ApiErrorCode.TIMEOUT,
         "Le serveur d'Irrigation Pro met trop de temps à répondre.",
@@ -257,10 +275,10 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
         cause,
       );
     }
-    if (signal?.aborted) {
+    if (options.signal?.aborted) {
       throw new ApiError(ApiErrorCode.ABORTED, 'Requête annulée.', 0, cause);
     }
-    console.error('[api] serveur injoignable', { url, cause });
+    console.error('[api] serveur injoignable', { url: options.url, cause });
     throw new ApiError(
       ApiErrorCode.NETWORK,
       "Impossible de contacter le serveur d'Irrigation Pro.",
@@ -270,9 +288,86 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   } finally {
     timeout.cleanup();
   }
+}
+
+/**
+ * Obtient un jeton d'accès utilisable après un `401`, ou `null` si la session
+ * est perdue.
+ *
+ * `tokenUsed` est le jeton avec lequel la requête vient d'échouer. S'il a déjà
+ * changé, c'est qu'un autre appel a rafraîchi entre-temps : on rejoue
+ * directement, sans redemander de rotation.
+ */
+async function obtainFreshAccessToken(tokenUsed: string | null): Promise<string | null> {
+  const current = getAccessToken();
+  if (current && current !== tokenUsed) return current;
+  return refreshAccessToken();
+}
+
+/**
+ * Répercute sur la session ce que dit une réponse en erreur.
+ *
+ * C'est le seul endroit qui décide de renvoyer l'utilisateur à l'écran de
+ * connexion.
+ */
+function applySessionSideEffects(error: ApiError, auth: AuthMode): void {
+  if (auth !== 'required') return;
+
+  if (error.status === 403 && error.code === AuthErrorCode.ACCOUNT_SUSPENDED) {
+    handleSuspendedResponse(error.message);
+    return;
+  }
+  if (error.status === 403 && error.code === AuthErrorCode.PASSWORD_CHANGE_REQUIRED) {
+    markPasswordChangeRequired();
+    return;
+  }
+  if (error.status === 401) {
+    handleAuthenticationFailure();
+  }
+}
+
+/**
+ * Exécute un appel typé vers le backend.
+ *
+ * `T` décrit la forme attendue de la réponse. Le client ne valide pas le schéma
+ * en profondeur : chaque appelant reste responsable de lire défensivement les
+ * champs optionnels.
+ */
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const config = getConfig();
+  const {
+    method = 'GET',
+    body,
+    signal,
+    timeoutMs = config.requestTimeoutMs,
+    auth = 'required',
+  } = options;
+
+  const send: SendOptions = {
+    url: `${config.apiUrl}${path.startsWith('/') ? path : `/${path}`}`,
+    method,
+    payload: body === undefined ? undefined : JSON.stringify(body),
+    timeoutMs,
+    signal,
+  };
+
+  const tokenUsed = auth === 'none' ? null : getAccessToken();
+  let response = await sendOnce(send, tokenUsed);
+
+  // Sur 401 : UNE SEULE tentative de rafraîchissement, puis reprise de la
+  // requête d'origine. Le rafraîchissement lui-même est mutualisé entre tous
+  // les appels en cours (voir `refreshAccessToken`).
+  if (response.status === 401 && auth === 'required') {
+    const freshToken = await obtainFreshAccessToken(tokenUsed);
+    if (freshToken) {
+      response = await sendOnce(send, freshToken);
+    }
+  }
 
   if (!response.ok) {
-    throw await toApiError(response);
+    const error = await toApiError(response);
+    applySessionSideEffects(error, auth);
+    throw error;
   }
 
   if (response.status === 204) {
@@ -282,7 +377,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   try {
     return (await response.json()) as T;
   } catch (cause) {
-    console.error('[api] réponse illisible', { url, cause });
+    console.error('[api] réponse illisible', { url: send.url, cause });
     throw new ApiError(
       ApiErrorCode.INVALID_RESPONSE,
       "La réponse du serveur d'Irrigation Pro est illisible.",

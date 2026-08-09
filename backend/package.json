@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "migrate": "tsx src/db/migrate.ts up",
-    "migrate:status": "tsx src/db/migrate.ts status"
+    "migrate:status": "tsx src/db/migrate.ts status",
+    "creer-admin": "tsx scripts/creer-admin.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",

@@ -41,8 +41,13 @@ const LIMITE_CORPS_JSON = '1mb';
  * - origine absente (curl, sonde de supervision, appel serveur à serveur) :
  *   pas d'en-tête CORS, la requête passe — un navigateur envoie toujours
  *   `Origin`, donc ce cas ne concerne pas les clients web ;
- * - origine connue : autorisée, avec `credentials` ;
+ * - origine connue : autorisée ;
  * - origine inconnue : refusée explicitement en 403.
+ *
+ * `credentials: false` (décision D-005b) : aucun cookie n'est échangé, les
+ * jetons voyagent dans l'en-tête `Authorization` et dans le corps JSON.
+ * Autoriser l'envoi de credentials n'aurait donc plus d'objet — et la surface
+ * CSRF classique disparaît avec les cookies.
  */
 const optionsCors: CorsOptions = {
   origin(origine, callback) {
@@ -56,7 +61,7 @@ const optionsCors: CorsOptions = {
     }
     callback(forbidden('Origine non autorisée.'));
   },
-  credentials: true,
+  credentials: false,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['X-Request-Id'],

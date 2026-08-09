@@ -31,6 +31,11 @@ export function jsonResponse(
   } as unknown as Response;
 }
 
+/** Erreur au format du contrat d'API : `{ error: { code, message } }`. */
+export function errorResponse(status: number, code: string, message: string): Response {
+  return jsonResponse({ error: { code, message } }, { status });
+}
+
 /** Réponse type du serveur en bonne santé (contrat confirmé côté backend). */
 export const HEALTH_OK = {
   status: 'ok',
@@ -49,6 +54,32 @@ export const HEALTH_DEGRADED = {
   database: { ok: false, latencyMs: 42 },
 };
 
+/* --- Comptes et jetons de référence ---------------------------------------- */
+
+/** Client type, tel que le serveur le renvoie (contrat d'API, § 2). */
+export const CLIENT_USER = {
+  id: '11111111-1111-4111-8111-111111111111',
+  email: 'jean@bureau-etudes.sn',
+  fullName: 'Jean Diop',
+  company: "Bureau d'études Sahel",
+  role: 'CLIENT',
+  mustChangePassword: false,
+};
+
+/** Couple de jetons initial. */
+export const SESSION_TOKENS = {
+  accessToken: 'acces-1',
+  refreshToken: 'rafraichissement-1',
+  expiresIn: 900,
+};
+
+/** Couple de jetons émis après rotation. */
+export const ROTATED_TOKENS = {
+  accessToken: 'acces-2',
+  refreshToken: 'rafraichissement-2',
+  expiresIn: 900,
+};
+
 /** Accès au double de `fetch` installé par `setup.ts`. */
 export function fetchMock() {
   return globalThis.fetch as unknown as ReturnType<
@@ -56,11 +87,53 @@ export function fetchMock() {
   >;
 }
 
+/** Requête telle que la voit un faux serveur. */
+export interface MockRequest {
+  method: string;
+  path: string;
+  /** Corps JSON déjà relu. */
+  body: Record<string, unknown>;
+  /** En-têtes envoyés — dont `Authorization`. */
+  headers: Record<string, string>;
+}
+
+export type MockHandler = (request: MockRequest) => Response | Promise<Response>;
+
+/**
+ * Installe un faux serveur, route par route.
+ *
+ * La clé est `"MÉTHODE /chemin"`, par exemple `"POST /api/auth/login"`. Tout
+ * appel vers une route non déclarée échoue bruyamment : un test ne doit jamais
+ * réussir par accident parce qu'une requête inattendue est passée inaperçue.
+ */
+export function mockApi(routes: Record<string, MockHandler>): void {
+  fetchMock().mockImplementation((input: unknown, init: RequestInit = {}) => {
+    const url = String(input);
+    const method = (init.method ?? 'GET').toUpperCase();
+    const path = new URL(url).pathname;
+    const key = `${method} ${path}`;
+
+    const handler = routes[key];
+    if (!handler) {
+      return Promise.reject(new Error(`Appel réseau non simulé dans ce test : ${key}`));
+    }
+
+    const body =
+      typeof init.body === 'string'
+        ? (JSON.parse(init.body) as Record<string, unknown>)
+        : {};
+
+    return Promise.resolve(
+      handler({ method, path, body, headers: (init.headers ?? {}) as Record<string, string> }),
+    );
+  });
+}
+
 /**
  * Monte un arbre React dans les mêmes conditions que l'application réelle,
  * mais avec un cache de requêtes neuf et silencieux à chaque test.
  */
-export function renderApp(ui: ReactElement): RenderResult {
+export function renderApp(ui: ReactElement, options: { route?: string } = {}): RenderResult {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { gcTime: 0, staleTime: 0 },
@@ -69,7 +142,7 @@ export function renderApp(ui: ReactElement): RenderResult {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/']}>{ui}</MemoryRouter>
+      <MemoryRouter initialEntries={[options.route ?? '/']}>{ui}</MemoryRouter>
     </QueryClientProvider>,
   );
 }

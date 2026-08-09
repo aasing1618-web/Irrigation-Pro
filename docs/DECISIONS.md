@@ -20,7 +20,30 @@ non-spécialiste. Express reste explicite : une route = une fonction.
 
 ---
 
-## D-002 — Base de données : PostgreSQL avec `pg` et migrations SQL manuelles
+## D-002 — Base de données : PostgreSQL **hébergé chez Supabase**, avec `pg` et migrations SQL manuelles
+
+> **Révisé le 2026-08-09** à la demande du propriétaire : la base n'est plus
+> installée localement, elle est hébergée par Supabase (projet `irrigation-pro`).
+> **Supabase sert de base de données, et de rien d'autre.**
+
+**Ce que ça change :** l'adresse de connexion (`DATABASE_URL`), et le fait que
+le chiffrement TLS devient obligatoire même en développement, puisque la base
+n'est plus sur la machine.
+
+**Ce que ça ne change pas :** le schéma, les migrations, les repositories et
+toute la logique d'isolation restent identiques — Supabase, c'est du PostgreSQL
+standard. L'authentification reste **la nôtre**, dans le backend :
+l'authentification intégrée de Supabase n'est pas utilisée, car le cahier des
+charges impose un modèle qu'elle ne couvre pas (aucune inscription libre,
+comptes créés à la main par le propriétaire, statut ACTIF/SUSPENDU, changement
+de mot de passe obligatoire à la première connexion) et parce qu'avoir les
+comptes à deux endroits est une source de désynchronisation.
+
+**L'application n'appelle jamais Supabase directement.** Elle ne parle qu'à
+notre API. C'est ce qui permet aux formules de calcul de rester sur le serveur
+(cf. D-007).
+
+
 
 **Choisi :** driver `pg` (node-postgres) + un runner de migrations maison qui
 exécute des fichiers `.sql` numérotés, dans une transaction, avec une table
@@ -139,6 +162,54 @@ décompilable — tout code de calcul embarqué serait lisible par un concurrent
 
 **Seule exception admise :** des contrôles de saisie triviaux côté interface
 (« ce champ doit être un nombre positif »), toujours **redoublés** côté serveur.
+
+---
+
+## D-009 — Fermeture de l'API publique de Supabase sur nos tables
+
+**Le risque :** Supabase publie automatiquement une API REST (PostgREST) sur
+toutes les tables du schéma `public`. Une clé « anon » est faite pour être
+distribuée publiquement. Sans précaution, n'importe qui disposant de l'URL du
+projet et de cette clé pourrait donc lire nos tables — dont `users` et
+`projects` — **sans jamais passer par notre serveur ni par aucune connexion**.
+
+**Choisi :** activer `ROW LEVEL SECURITY` sur les sept tables **sans définir
+aucune politique**. En PostgreSQL, RLS activé sans politique signifie « tout est
+refusé ». Les rôles `anon` et `authenticated` de Supabase ne voient donc plus
+rien. Les droits `SELECT/INSERT/UPDATE/DELETE` leur sont en outre retirés
+explicitement, ceinture et bretelles.
+
+Notre backend, lui, se connecte avec le rôle propriétaire de la base, qui
+contourne RLS — son accès est inchangé.
+
+**Pourquoi pas des politiques RLS complètes ?** Parce que l'isolation entre
+clients est déjà assurée par le backend, qui est le seul chemin d'accès légitime
+(cf. D-007 : les calculs doivent rester serveur). Écrire un second système
+d'autorisation dans la base créerait deux sources de vérité à maintenir
+d'accord. RLS est ici utilisé comme un **verrou de fermeture**, pas comme un
+mécanisme d'autorisation.
+
+**Conséquence opérationnelle :** la clé `service_role` de Supabase ne doit
+**jamais** quitter le serveur, et l'application installée ne reçoit aucune clé
+Supabase, d'aucune sorte.
+
+---
+
+## D-010 — Une suspension de compte prend effet en moins de 15 minutes
+
+**Choisi :** le statut du compte est relu **en base à chaque requête
+authentifiée**, et pas seulement à la connexion. Le jeton d'accès étant de
+courte durée, un compte suspendu perd l'accès au plus tard au bout de 15
+minutes, et immédiatement sur toute action passant par le serveur.
+
+**Pourquoi c'est important commercialement :** c'est le seul levier du
+propriétaire. Un client qui ne paie plus doit perdre l'accès de façon fiable,
+sans qu'il soit possible de « rester connecté » indéfiniment en gardant
+l'application ouverte.
+
+**Mise en œuvre :** à la suspension, toutes les sessions longues du compte sont
+révoquées en base. Le jeton d'accès en cours reste techniquement valide jusqu'à
+son expiration, mais toute requête est refusée puisque le statut est revérifié.
 
 ---
 

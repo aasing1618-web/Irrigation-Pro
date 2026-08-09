@@ -61,6 +61,23 @@ const schémaEnvironnement = z.object({
 
   TEST_DATABASE_URL: z.string().min(1).optional(),
 
+  // Connexion DIRECTE à la base (port 5432 chez Supabase), utilisée uniquement
+  // par les migrations. Le pooler transactionnel (port 6543) gère mal le DDL
+  // long et les verrous consultatifs ; l'application, elle, peut passer par le
+  // pooler sans problème. Facultative : à défaut, les migrations utilisent
+  // DATABASE_URL.
+  DIRECT_DATABASE_URL: z
+    .string()
+    .min(1)
+    .startsWith('postgres', 'doit commencer par « postgresql:// »')
+    .optional(),
+
+  // Chemin vers un certificat d'autorité, si le certificat TLS du serveur de
+  // base de données n'est pas vérifiable par le magasin d'autorités du système.
+  // Facultative — et c'est la SEULE réponse acceptable à une erreur de
+  // certificat : ne jamais désactiver la vérification TLS.
+  DATABASE_SSL_CA: z.string().min(1).optional(),
+
   // Hors production on tolère un secret de développement pour que le projet
   // démarre sans configuration ; en production le secret est obligatoire.
   JWT_SECRET: estProduction
@@ -152,6 +169,8 @@ export const config: {
   port: number;
   databaseUrl: string;
   testDatabaseUrl: string | undefined;
+  directDatabaseUrl: string | undefined;
+  databaseSslCa: string | undefined;
   jwtSecret: string;
   accessTokenTtl: string;
   refreshTokenTtlDays: number;
@@ -163,6 +182,8 @@ export const config: {
   port: env.PORT,
   databaseUrl: estTest && env.TEST_DATABASE_URL ? env.TEST_DATABASE_URL : env.DATABASE_URL,
   testDatabaseUrl: env.TEST_DATABASE_URL,
+  directDatabaseUrl: env.DIRECT_DATABASE_URL,
+  databaseSslCa: env.DATABASE_SSL_CA,
   jwtSecret: env.JWT_SECRET,
   accessTokenTtl: env.ACCESS_TOKEN_TTL,
   refreshTokenTtlDays: env.REFRESH_TOKEN_TTL_DAYS,

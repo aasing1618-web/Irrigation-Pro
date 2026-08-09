@@ -188,3 +188,54 @@ export function LockIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/* --- Session et compte ----------------------------------------------------- */
+
+export function KeyIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="8" cy="8" r="4.25" />
+      <path d="m11 11 8 8M16.5 16.5 15 18M19 14l-1.5 1.5" />
+    </Icon>
+  );
+}
+
+export function UserIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="8.5" r="3.75" />
+      <path d="M4.75 20a7.25 7.25 0 0 1 14.5 0" />
+    </Icon>
+  );
+}
+
+export function LogoutIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M14.5 4.5h3.25A1.75 1.75 0 0 1 19.5 6.25v11.5a1.75 1.75 0 0 1-1.75 1.75H14.5" />
+      <path d="M10 8.25 6 12l4 3.75M6 12h9" />
+    </Icon>
+  );
+}
+
+/** Œil ouvert — « afficher le mot de passe ». */
+export function EyeIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M2.75 12S6 6.5 12 6.5 21.25 12 21.25 12 18 17.5 12 17.5 2.75 12 2.75 12Z" />
+      <circle cx="12" cy="12" r="2.75" />
+    </Icon>
+  );
+}
+
+/** Œil barré — « masquer le mot de passe ». */
+export function EyeOffIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M3 3l18 18" />
+      <path d="M10.2 6.8A8.9 8.9 0 0 1 12 6.5c6 0 9.25 5.5 9.25 5.5a16 16 0 0 1-3.2 3.7" />
+      <path d="M6.4 8.4A15.9 15.9 0 0 0 2.75 12S6 17.5 12 17.5c1.2 0 2.3-.2 3.3-.6" />
+      <path d="M9.9 9.9a2.75 2.75 0 0 0 3.9 3.9" />
+    </Icon>
+  );
+}

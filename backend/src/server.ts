@@ -1,8 +1,9 @@
 /**
  * Point d'entrée du serveur.
  *
- * Rôle unique : démarrer l'écoute HTTP et s'arrêter proprement. Toute la
- * construction de l'application est dans `app.ts` (testable sans réseau).
+ * Rôle unique : démarrer l'écoute HTTP, planifier le ménage périodique, et
+ * s'arrêter proprement. Toute la construction de l'application est dans
+ * `app.ts` (testable sans réseau).
  *
  * Arrêt propre : à la réception de SIGINT (Ctrl+C) ou SIGTERM (arrêt de
  * service), on cesse d'accepter de nouvelles connexions, on laisse finir les
@@ -18,10 +19,17 @@
 import { createApp } from './app.js';
 import { config } from './config.js';
 import { closePool } from './db/index.js';
+import { deleteExpiredTokens } from './db/repositories/refresh-tokens.repo.js';
 import { logger } from './logger.js';
 
 /** Au-delà, on arrête de force : une requête bloquée ne doit pas figer l'arrêt. */
 const DÉLAI_ARRÊT_FORCÉ_MS = 10_000;
+
+/** Délai avant le premier ménage : le démarrage passe en premier. */
+const DÉLAI_PREMIER_MÉNAGE_MS = 30_000;
+
+/** Puis une fois par jour. Rien ne presse : ces lignes sont déjà inutilisables. */
+const INTERVALLE_MÉNAGE_MS = 24 * 60 * 60 * 1000;
 
 const app = createApp();
 
@@ -32,6 +40,65 @@ const server = app.listen(config.port, () => {
   );
 });
 
+// ---------------------------------------------------------------------------
+// Ménage des jetons de rafraîchissement expirés
+// ---------------------------------------------------------------------------
+
+let premierMénage: NodeJS.Timeout | undefined;
+let ménagePériodique: NodeJS.Timeout | undefined;
+
+/**
+ * Supprime les jetons dont la date d'expiration est passée.
+ *
+ * ⚠ EXPIRÉS UNIQUEMENT. Un jeton révoqué mais encore valide dans le temps
+ *   reste en base : c'est lui, et son motif de révocation, qui permettent de
+ *   reconnaître un jeton volé qu'on rejoue (`REFRESH_TOKEN_REUSE`). L'effacer
+ *   transformerait un vol détectable en anodin « jeton inconnu ». La règle est
+ *   appliquée dans `deleteExpiredTokens()` ; elle est rappelée ici parce que
+ *   c'est ici qu'on serait tenté d'« optimiser » la requête.
+ *
+ * N'émet JAMAIS d'exception : une base momentanément injoignable ne doit pas
+ * faire tomber un serveur qui, par ailleurs, répond parfaitement. On avertit et
+ * on retentera dans 24 h — des lignes périmées qui traînent un jour de plus ne
+ * gênent personne.
+ */
+async function nettoyerJetonsExpirés(): Promise<void> {
+  try {
+    const supprimés = await deleteExpiredTokens();
+    logger.info({ supprimés }, 'Ménage : jetons de rafraîchissement expirés supprimés');
+  } catch (err) {
+    logger.warn(
+      { err },
+      'Ménage des jetons expirés impossible — le serveur continue, nouvelle tentative dans 24 h',
+    );
+  }
+}
+
+/**
+ * Planifie le ménage : une fois peu après le démarrage, puis toutes les 24 h.
+ *
+ * Rien n'est planifié en environnement `test` : les tests remplacent la couche
+ * base par un état en mémoire et ne doivent jamais ouvrir de connexion réelle.
+ *
+ * Les deux minuteries sont `unref()` : elles ne doivent pas, à elles seules,
+ * maintenir le processus en vie et retarder son arrêt de vingt-quatre heures.
+ */
+function planifierMénage(): void {
+  if (config.nodeEnv === 'test') return;
+
+  premierMénage = setTimeout(() => {
+    void nettoyerJetonsExpirés();
+  }, DÉLAI_PREMIER_MÉNAGE_MS);
+  premierMénage.unref();
+
+  ménagePériodique = setInterval(() => {
+    void nettoyerJetonsExpirés();
+  }, INTERVALLE_MÉNAGE_MS);
+  ménagePériodique.unref();
+}
+
+planifierMénage();
+
 let arrêtEnCours = false;
 
 async function arrêtPropre(signal: string): Promise<void> {
@@ -39,6 +106,11 @@ async function arrêtPropre(signal: string): Promise<void> {
   arrêtEnCours = true;
 
   logger.info({ signal }, 'Arrêt du serveur demandé');
+
+  // Le ménage d'abord : inutile d'ouvrir une requête vers une base dont on
+  // s'apprête à fermer le pool.
+  if (premierMénage) clearTimeout(premierMénage);
+  if (ménagePériodique) clearInterval(ménagePériodique);
 
   const minuterie = setTimeout(() => {
     logger.error('Arrêt trop long : sortie forcée');
