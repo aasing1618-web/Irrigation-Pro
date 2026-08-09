@@ -1,0 +1,46 @@
+# Dépendances
+node_modules/
+.pnp/
+.pnp.js
+
+# Build
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# Tauri / Rust
+app/src-tauri/target/
+app/src-tauri/gen/
+
+# Environnement — ne JAMAIS committer de secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+logs/
+
+# Tests / couverture
+coverage/
+.vitest/
+
+# Outils de développement tiers (skills installés).
+# Leur contenu est réinstallable : il est épinglé par skills-lock.json, qui,
+# lui, est versionné. Les committer ajouterait 60 Mo de code étranger au produit.
+.agents/
+.claude/skills/
+.claude/settings.local.json
+
+# Éditeurs / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Fichiers générés (rapports PDF locaux)
+backend/storage/
+tmp/

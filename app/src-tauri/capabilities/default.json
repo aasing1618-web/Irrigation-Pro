@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Permissions accordées à la fenêtre principale d'Irrigation Pro. Volontairement réduites au strict minimum : l'application n'a besoin ni du système de fichiers, ni du shell, ni du presse-papiers en Vague 0. Chaque nouvelle permission doit être justifiée.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}

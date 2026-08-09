@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <!--
+      L'application ne charge aucune ressource distante : tout est empaqueté.
+      Les appels réseau sont limités au backend Irrigation Pro (connect-src),
+      ce qui applique la règle « HTTPS partout » jusque dans la WebView.
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https: http://localhost:* ws://localhost:*; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <title>Irrigation Pro</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,65 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Irrigation Pro",
+  "version": "../package.json",
+  "identifier": "app.irrigationpro.desktop",
+
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Irrigation Pro",
+        "width": 1280,
+        "height": 820,
+        "minWidth": 1024,
+        "minHeight": 660,
+        "resizable": true,
+        "center": true,
+        "focus": true,
+        "decorations": true,
+        "theme": "Light",
+        "backgroundColor": "#0B2229"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' asset: data:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' ipc: http://ipc.localhost https: http://localhost:4000 http://localhost:5173 ws://localhost:5173; object-src 'none'; base-uri 'self'; form-action 'none'",
+      "assetProtocol": {
+        "enable": false
+      }
+    },
+    "withGlobalTauri": false
+  },
+
+  "bundle": {
+    "active": true,
+    "targets": ["nsis"],
+    "publisher": "Irrigation Pro",
+    "copyright": "© Irrigation Pro",
+    "category": "Business",
+    "shortDescription": "Dimensionnement et suivi des projets d'irrigation",
+    "longDescription": "Irrigation Pro est un logiciel professionnel destiné aux ingénieurs agronomes, bureaux d'études et installateurs. Il regroupe les projets, les calculs d'irrigation et la génération de rapports dans une seule application.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "languages": ["French"],
+        "displayLanguageSelector": false,
+        "installMode": "currentUser"
+      }
+    }
+  }
+}
