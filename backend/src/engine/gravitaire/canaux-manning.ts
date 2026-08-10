@@ -129,11 +129,19 @@ interface Geometrie {
   readonly r: number;
 }
 
-/** Géométrie d'une section trapézoïdale pour un tirant d'eau donné. */
+/**
+ * Géométrie d'une section trapézoïdale pour un tirant d'eau donné.
+ *
+ * `Math.hypot(1, m)` calcule `√(1 + m²)` **sans passer par `m²`** : pour un
+ * fruit de talus démesuré (m > 1,3·10¹⁵⁴), `m * m` déborde à `Infinity` et le
+ * périmètre mouillé devenait infini — une sortie non exploitable, contraire à
+ * la règle « aucune formule ne renvoie NaN ou Infinity ». Le résultat
+ * mathématique est identique.
+ */
 function geometrie(h: number, b: number, m: number): Geometrie {
   const s = (b + m * h) * h;
-  const p = b + 2 * h * Math.sqrt(1 + m * m);
-  return { s, p, r: p === 0 ? 0 : s / p };
+  const p = b + 2 * h * Math.hypot(1, m);
+  return { s, p, r: p === 0 || !Number.isFinite(p) ? 0 : s / p };
 }
 
 /** Débit de Manning-Strickler pour un tirant d'eau donné (m³/s). */
@@ -227,6 +235,11 @@ export function calculerCanalManning(entree: unknown): ResultatMoteur<ResultatsC
       { code: 'SECTION_NULLE', champ: 'h' },
     );
   }
+  // Filet de sécurité : une géométrie démesurée (largeur ou fruit de talus
+  // absurdes) doit produire une erreur métier, jamais une section infinie.
+  exigerFini(s, 'section mouillée', 'b');
+  exigerFini(p, 'périmètre mouillé', 'm');
+  exigerFini(r, 'rayon hydraulique', 'b');
 
   const qCalcule = exigerFini(debit(h, n, e.b, e.m, e.i), 'débit calculé');
   const ecart = qCalcule - e.qCible;
@@ -317,7 +330,7 @@ export function calculerCanalManning(entree: unknown): ResultatMoteur<ResultatsC
         maxi: VITESSE_CANAL_MAXI,
         conforme: vitesseConforme,
       },
-      rapportBSurH: h === 0 ? null : e.b / h,
+      rapportBSurH: h === 0 ? null : exigerFini(e.b / h, 'rapport b/h', 'b'),
       revanche,
       tailleCanal: classement.taille,
       penteRecommandee: classement.penteRecommandee,

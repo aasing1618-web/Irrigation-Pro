@@ -10,9 +10,92 @@ import { z } from 'zod';
 
 import { ErreurValidation } from './erreurs.js';
 
+/**
+ * Traduction des messages par défaut de `zod`, qui sont en anglais.
+ *
+ * Sans elle, une saisie de type incorrect remonte jusqu'à l'utilisateur sous la
+ * forme « Invalid enum value. Expected 'PLASTIQUE' | 'ALUMINIUM', received
+ * 'BAMBOU' » : illisible pour un ingénieur agronome, et contraire à la règle
+ * « tous les messages du moteur sont en français » (voir `erreurs.ts`).
+ *
+ * Les messages explicites déjà passés aux schémas (`nombrePositif`,
+ * `joursDuMois`…) restent prioritaires : `zod` n'appelle cette carte que
+ * lorsqu'aucun message n'a été fourni.
+ */
+const TYPES_EN_FRANCAIS: Readonly<Record<string, string>> = {
+  string: 'du texte',
+  number: 'un nombre',
+  boolean: 'oui ou non',
+  array: 'une liste',
+  object: 'un ensemble de valeurs',
+  date: 'une date',
+  integer: 'un nombre entier',
+};
+
+export const carteErreursFrancaise: z.ZodErrorMap = (probleme, contexte) => {
+  switch (probleme.code) {
+    case z.ZodIssueCode.invalid_type:
+      if (probleme.received === 'undefined' || probleme.received === 'null') {
+        return { message: 'ce champ est obligatoire' };
+      }
+      return {
+        message:
+          TYPES_EN_FRANCAIS[probleme.expected] === undefined
+            ? 'la valeur saisie n’est pas reconnue pour ce champ'
+            : `doit être ${TYPES_EN_FRANCAIS[probleme.expected] as string}`,
+      };
+
+    case z.ZodIssueCode.invalid_enum_value:
+      return {
+        message: `valeur non reconnue : choisissez parmi ${probleme.options.join(', ')}`,
+      };
+
+    case z.ZodIssueCode.unrecognized_keys:
+      return {
+        message: `champ non attendu : ${probleme.keys.join(', ')}`,
+      };
+
+    case z.ZodIssueCode.too_small:
+      if (probleme.type === 'array') {
+        return { message: `doit compter au moins ${String(probleme.minimum)} élément(s)` };
+      }
+      if (probleme.type === 'string') {
+        return { message: 'doit être renseigné' };
+      }
+      return {
+        message: probleme.inclusive
+          ? `ne peut pas être inférieur à ${String(probleme.minimum)}`
+          : `doit être strictement supérieur à ${String(probleme.minimum)}`,
+      };
+
+    case z.ZodIssueCode.too_big:
+      if (probleme.type === 'array') {
+        return { message: `ne peut pas compter plus de ${String(probleme.maximum)} élément(s)` };
+      }
+      if (probleme.type === 'string') {
+        return { message: `est trop long (${String(probleme.maximum)} caractères au maximum)` };
+      }
+      return {
+        message: probleme.inclusive
+          ? `ne peut pas dépasser ${String(probleme.maximum)}`
+          : `doit être strictement inférieur à ${String(probleme.maximum)}`,
+      };
+
+    case z.ZodIssueCode.not_finite:
+      return { message: 'doit être un nombre fini' };
+
+    case z.ZodIssueCode.invalid_union:
+      return { message: 'la valeur saisie ne correspond à aucun format attendu' };
+
+    default:
+      // Les messages explicites des schémas passent par ici, déjà en français.
+      return { message: contexte.defaultError };
+  }
+};
+
 /** Valide une entrée avec un schéma zod, ou lève une `ErreurValidation`. */
 export function analyser<T extends z.ZodTypeAny>(schema: T, entree: unknown): z.infer<T> {
-  const resultat = schema.safeParse(entree);
+  const resultat = schema.safeParse(entree, { errorMap: carteErreursFrancaise });
   if (resultat.success) return resultat.data;
 
   const problemes = resultat.error.issues;

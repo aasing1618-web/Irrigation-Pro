@@ -315,6 +315,19 @@ saisie. Aucune autre feuille ne le référence : c'est un exercice pédagogique.
 At = 100 ha, 50 ha maïs / 50 ha coton → **besoin net de pointe = 201,5 mm/mois**
 (Juillet, 31 j) ; **BEnTotal = 619,8875 mm**.
 
+> ⚠️ **Donnée manquante — à réclamer.** Le cahier des charges transmis donne les
+> **sorties** de ce cas mais pas le **tableau climatique mensuel** qui les
+> produit (ETO, Pe, Perc, R, jours, Kc par mois). Les tests utilisent donc un
+> calendrier **reconstitué** qui reproduit exactement les valeurs publiées — et
+> qui redonne aussi, sans réglage supplémentaire, celles du module
+> `3_Nb_Irrig` (Ni 15,497 ; ESP mini 6,1538 en juillet ; IC 5,1538), ce qui est
+> un bon indice de cohérence.
+>
+> Ce n'est **pas** une preuve que le calendrier réel est celui-là. Dès que le
+> classeur d'origine sera disponible, remplacer ce calendrier par le vrai et
+> relancer les tests. Tant que ce n'est pas fait, ce cas prouve que les
+> **formules** sont justes, pas que les **données d'exemple** le sont.
+
 ---
 
 ## 6. Module `3_Nb_Irrig_ESP_IC` — Nombre d'irrigations, espacement, cycle

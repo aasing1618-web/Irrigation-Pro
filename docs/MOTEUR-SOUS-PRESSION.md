@@ -159,6 +159,22 @@ BEnTotal          = SUM(Ben sur 12 mois)
 At=10 ha, Tomate, goutte-à-goutte, Kr=0,85 → **besoin net de pointe =
 171,275 mm/mois** (mois 4, 31 j) ; **BEnTotal = 507,80375 mm**.
 
+> ⚠️ **Donnée manquante — à réclamer.** Comme pour le classeur gravitaire, le
+> **tableau climatique mensuel** de ce cas n'a pas été transmis : seules les
+> sorties le sont. Les tests utilisent un calendrier reconstitué qui reproduit
+> exactement les valeurs publiées. À remplacer par le vrai tableau dès que le
+> classeur sera disponible.
+>
+> ⚠️ **Ambiguïté sur `BEnTotal = 507,80375 mm`.** Le classeur ne plafonne pas
+> les mois excédentaires. Deux lectures sont possibles : le total **inclut** le
+> −10 mm de septembre (507,80375), ou il ne compte que les mois déficitaires
+> (517,80375). L'implémentation expose **les deux** : `bEnTotalClasseur`
+> (fidèle au classeur, qui retrouve la valeur publiée) et le total retenu pour
+> le **dimensionnement**, qui plafonne à 0 — c'est celui-là qu'il faut utiliser,
+> car un mois pluvieux ne doit pas subventionner un mois sec.
+>
+> À confirmer par l'auteur du classeur.
+
 ---
 
 ## 4. Module `3_Nb_Irrig_ESP_IC`
