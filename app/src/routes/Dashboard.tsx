@@ -6,12 +6,14 @@
  * semblant d'avoir du contenu : ils annoncent ce qui arrive.
  */
 
+import { useNavigate } from 'react-router';
+
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
 import { PageHeader } from '../components/PageHeader';
 import { StatusBadge, type StatusTone } from '../components/StatusBadge';
 import { Button } from '../components/Button';
-import { ClockIcon, ProjectsIcon, RetryIcon, ServerIcon } from '../components/icons';
+import { CalculationsIcon, ProjectsIcon, RetryIcon, ServerIcon } from '../components/icons';
 import type { ConnectionState, HealthResponse } from '../hooks/useHealth';
 
 export interface DashboardProps {
@@ -21,6 +23,8 @@ export interface DashboardProps {
 }
 
 export function Dashboard({ connection, onRefresh, isRefreshing }: DashboardProps) {
+  const navigate = useNavigate();
+
   return (
     <div className="mx-auto max-w-5xl px-8 py-7">
       <PageHeader
@@ -30,30 +34,30 @@ export function Dashboard({ connection, onRefresh, isRefreshing }: DashboardProp
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex flex-col gap-5">
-          <Card
-            title="Projets récents"
-            description="Les projets que vous ouvrez apparaîtront ici, du plus récent au plus ancien."
-            flush
-          >
+          <Card title="Vos projets" flush>
             <EmptyState
               icon={<ProjectsIcon />}
-              title="Aucun projet pour l’instant"
-              description="La création de projets arrive avec la prochaine étape du logiciel. Vous pourrez y regrouper vos parcelles, vos calculs et vos rapports."
-              note="Disponible prochainement"
+              title="Vos chantiers, au même endroit"
+              description="Un projet regroupe un périmètre irrigué : ses données de terrain, ses calculs de dimensionnement et ses rapports. Vous seul y avez accès."
+              action={
+                <Button variant="primary" size="sm" onClick={() => void navigate('/projets')}>
+                  Ouvrir mes projets
+                </Button>
+              }
             />
           </Card>
 
-          <Card
-            title="Activité"
-            description="Le journal de vos derniers calculs et rapports générés."
-            flush
-          >
+          <Card title="Modules de calcul" flush>
             <EmptyState
-              icon={<ClockIcon />}
-              title="Rien à afficher"
-              description="Dès que vous lancerez des calculs, leur historique s’affichera ici pour vous permettre de revenir sur un résultat."
-              note="Disponible prochainement"
+              icon={<CalculationsIcon />}
+              title="Dimensionnez sans quitter le logiciel"
+              description="Besoins en eau, hydraulique des canaux, conduites : les calculs sont réalisés par le serveur et leurs avertissements vous sont signalés."
               className="py-10"
+              action={
+                <Button variant="secondary" size="sm" onClick={() => void navigate('/calculs')}>
+                  Voir les modules
+                </Button>
+              }
             />
           </Card>
         </div>

@@ -23,9 +23,11 @@ import { StartupScreen } from './components/StartupScreen';
 import { useHealth } from './hooks/useHealth';
 import { ConfigurationError, getConfig } from './lib/config';
 
+import { CalculRun } from './routes/CalculRun';
 import { Calculations } from './routes/Calculations';
 import { Dashboard } from './routes/Dashboard';
 import { NotFound } from './routes/NotFound';
+import { ProjectDetail } from './routes/ProjectDetail';
 import { Projects } from './routes/Projects';
 import { Reports } from './routes/Reports';
 import { Settings } from './routes/Settings';
@@ -88,7 +90,11 @@ function ConnectedApp() {
               }
             />
             <Route path="projets" element={<Projects />} />
+            <Route path="projets/:projectId" element={<ProjectDetail />} />
+            {/* Le même écran de calcul, avec ou sans projet d'accueil. */}
+            <Route path="projets/:projectId/calculs/:moduleCode" element={<CalculRun />} />
             <Route path="calculs" element={<Calculations />} />
+            <Route path="calculs/:moduleCode" element={<CalculRun />} />
             <Route path="rapports" element={<Reports />} />
             <Route path="parametres" element={<Settings />} />
             <Route path="*" element={<NotFound />} />

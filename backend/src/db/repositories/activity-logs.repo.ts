@@ -18,17 +18,18 @@ import { run } from '../executor.js';
 // ---------------------------------------------------------------------------
 
 /**
- * Les actions journalisées en Vague 1 (connexion et comptes).
+ * Les actions journalisées.
  *
- * C'est volontairement une liste FERMÉE : le contrat d'API (docs/API-VAGUE-1.md,
- * § 4) énumère exactement ces huit événements. Une faute de frappe dans un
- * appel (`'LOGIN_SUCESS'`) devient ainsi une erreur de compilation, et non une
- * ligne de journal introuvable le jour où on la cherche.
+ * C'est volontairement une liste FERMÉE : les contrats d'API énumèrent
+ * exactement ces événements. Une faute de frappe dans un appel
+ * (`'LOGIN_SUCESS'`) devient ainsi une erreur de compilation, et non une ligne
+ * de journal introuvable le jour où on la cherche.
  *
  * Les vagues suivantes ajouteront leurs propres actions à cette union
- * (`PROJECT_CREATED`, `REPORT_GENERATED`…).
+ * (`REPORT_GENERATED`…).
  */
 export type ActivityAction =
+  // Vague 1 — connexion et comptes (docs/API-VAGUE-1.md, § 4).
   | 'LOGIN_SUCCESS'
   | 'LOGIN_FAILED'
   | 'LOGIN_BLOCKED_SUSPENDED'
@@ -36,7 +37,14 @@ export type ActivityAction =
   | 'PASSWORD_CHANGED'
   | 'LOGOUT'
   | 'TOKEN_REFRESHED'
-  | 'REFRESH_TOKEN_REUSE';
+  | 'REFRESH_TOKEN_REUSE'
+  // Vague 2 — projets et calculs (docs/API-VAGUE-2.md, § 5).
+  | 'PROJECT_CREATED'
+  | 'PROJECT_UPDATED'
+  | 'PROJECT_DELETED'
+  | 'CALCUL_RUN'
+  | 'CALCUL_SAVED'
+  | 'CALCUL_DELETED';
 
 /** Une ligne de `activity_logs`. `id` est un `bigserial`, lu en texte. */
 export type ActivityLogRow = {

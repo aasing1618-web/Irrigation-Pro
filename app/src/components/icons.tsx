@@ -239,3 +239,100 @@ export function EyeOffIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/* --- Projets et calculs (Vague 2) ------------------------------------------ */
+
+export function PlusIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 5v14M5 12h14" />
+    </Icon>
+  );
+}
+
+export function SearchIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="10.75" cy="10.75" r="6.25" />
+      <path d="m15.5 15.5 4 4" />
+    </Icon>
+  );
+}
+
+export function PencilIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4.5 19.5h4l10-10a2.12 2.12 0 0 0-3-3l-10 10z" />
+      <path d="m14 6.5 3.5 3.5" />
+    </Icon>
+  );
+}
+
+export function TrashIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4.5 6.5h15" />
+      <path d="M9.5 6.5V5a1.5 1.5 0 0 1 1.5-1.5h2A1.5 1.5 0 0 1 14.5 5v1.5" />
+      <path d="M6.5 6.5 7.4 19a1.5 1.5 0 0 0 1.5 1.4h6.2a1.5 1.5 0 0 0 1.5-1.4l.9-12.5" />
+      <path d="M10.5 10v6.5M13.5 10v6.5" />
+    </Icon>
+  );
+}
+
+/** Boîte d'archives — « conserver ce calcul dans le projet ». */
+export function ArchiveIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="3.5" y="4" width="17" height="4.5" rx="1.25" />
+      <path d="M5.25 8.5v10A1.5 1.5 0 0 0 6.75 20h10.5a1.5 1.5 0 0 0 1.5-1.5v-10" />
+      <path d="M10 12h4" />
+    </Icon>
+  );
+}
+
+export function ArrowLeftIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M19 12H5" />
+      <path d="m10.5 6.5-5 5.5 5 5.5" />
+    </Icon>
+  );
+}
+
+export function ChevronRightIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m9.5 5.5 6.5 6.5-6.5 6.5" />
+    </Icon>
+  );
+}
+
+/** Repère de localisation — le périmètre irrigué sur le terrain. */
+export function MapPinIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 21s6.5-6.1 6.5-10.5a6.5 6.5 0 1 0-13 0C5.5 14.9 12 21 12 21Z" />
+      <circle cx="12" cy="10.5" r="2.5" />
+    </Icon>
+  );
+}
+
+/** Flèche de lancement — « calculer ». */
+export function RunIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="m10 8.5 5 3.5-5 3.5z" />
+    </Icon>
+  );
+}
+
+export function InfoIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M12 11v5.5" />
+      <path d="M12 7.75h.01" />
+    </Icon>
+  );
+}

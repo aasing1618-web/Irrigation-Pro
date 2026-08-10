@@ -1,5 +1,9 @@
 /**
- * Dépôt « projets » — table `projects` et sa table fille `project_data`.
+ * Dépôt « projets » — table `projects`.
+ *
+ * Les résultats de calcul (`project_data`) ont leur propre dépôt :
+ * `project-data.repo.ts`. La règle d'isolation ci-dessous s'applique aux deux
+ * fichiers, sans exception.
  *
  * ═══════════════════════════════════════════════════════════════════════
  *  RÈGLE D'ISOLATION — NON NÉGOCIABLE
@@ -34,6 +38,13 @@ import { run } from '../executor.js';
 
 export type ProjectStatus = 'BROUILLON' | 'EN_COURS' | 'TERMINE';
 
+/** Les trois statuts, sous forme de tableau figé (validation `zod` des routes). */
+export const PROJECT_STATUSES: readonly ProjectStatus[] = [
+  'BROUILLON',
+  'EN_COURS',
+  'TERMINE',
+] as const;
+
 /** Une ligne de `projects` (déclarée en `type` : contrainte du driver `pg`). */
 export type ProjectRow = {
   id: string;
@@ -48,16 +59,14 @@ export type ProjectRow = {
   deleted_at: Date | null;
 };
 
-/** Une ligne de `project_data` : le résultat d'un module de calcul. */
-export type ProjectDataRow = {
-  id: string;
-  project_id: string;
-  module: string;
-  inputs: unknown;
-  results: unknown;
-  engine_version: string;
-  computed_at: Date;
-};
+/**
+ * Une ligne de `projects` accompagnée du nombre de calculs archivés.
+ *
+ * `calcul_count` est renvoyé en texte : `count(*)` est un `bigint`, que le
+ * driver `pg` remonte déjà en chaîne. On l'assume explicitement plutôt que de
+ * laisser croire à un `number`.
+ */
+export type ProjectWithCalculCountRow = ProjectRow & { calcul_count: string };
 
 export type CreateProjectInput = {
   name: string;
@@ -75,11 +84,13 @@ export type UpdateProjectInput = {
   status?: ProjectStatus;
 };
 
-export type SaveProjectDataInput = {
-  module: string;
-  inputs: unknown;
-  results: unknown;
-  engineVersion: string;
+/** Filtres de la liste « mes projets » (contrat d'API Vague 2, § 2). */
+export type ListProjectsOptions = {
+  status?: ProjectStatus | null;
+  /** Texte libre, recherché dans le nom du projet et le nom du client. */
+  search?: string | null;
+  limit?: number;
+  offset?: number;
 };
 
 const PROJECT_COLUMNS = `
@@ -87,47 +98,105 @@ const PROJECT_COLUMNS = `
   status, created_at, updated_at, deleted_at
 `;
 
-const PROJECT_DATA_COLUMNS = `
-  id, project_id, module, inputs, results, engine_version, computed_at
+/** Mêmes colonnes, préfixées, pour les requêtes qui aliasent la table. */
+const PROJECT_COLUMNS_PREFIXED = `
+  p.id, p.owner_id, p.name, p.client_name, p.location, p.description,
+  p.status, p.created_at, p.updated_at, p.deleted_at
 `;
 
-/** Mêmes colonnes, préfixées, pour les requêtes avec jointure sur `projects`. */
-const PROJECT_DATA_COLUMNS_PREFIXED = `
-  d.id, d.project_id, d.module, d.inputs, d.results, d.engine_version, d.computed_at
-`;
+const LIMITE_PAR_DEFAUT = 50;
+const LIMITE_MAX = 200;
+
+// ---------------------------------------------------------------------------
+// Recherche texte
+// ---------------------------------------------------------------------------
+
+/**
+ * Prépare un motif `ILIKE` à partir d'un texte saisi par l'utilisateur.
+ *
+ * Le texte part en paramètre `$n` : il n'y a donc aucun risque d'injection SQL.
+ * L'échappement ci-dessous sert à autre chose — empêcher qu'un `%` ou un `_`
+ * tapé par l'utilisateur ne devienne un joker et ne ramène toute la liste.
+ * Une recherche sur « 100 % » doit chercher « 100 % », pas « n'importe quoi ».
+ */
+function motifRecherche(texte: string): string {
+  const échappé = texte.replace(/[\\%_]/g, (caractère) => `\\${caractère}`);
+  return `%${échappé}%`;
+}
+
+/** Borne la pagination, quelles que soient les valeurs reçues. */
+function bornerPagination(options: { limit?: number; offset?: number }): {
+  limit: number;
+  offset: number;
+} {
+  const limit = Math.min(Math.max(Math.trunc(options.limit ?? LIMITE_PAR_DEFAUT), 1), LIMITE_MAX);
+  const offset = Math.max(Math.trunc(options.offset ?? 0), 0);
+  return { limit, offset };
+}
 
 // ---------------------------------------------------------------------------
 // Projets — lectures
 // ---------------------------------------------------------------------------
 
-/** Liste les projets non supprimés d'un propriétaire. */
+/**
+ * Liste les projets non supprimés d'un propriétaire, avec le nombre de calculs
+ * archivés sur chacun.
+ *
+ * Le comptage passe par une sous-requête corrélée plutôt que par un
+ * `LEFT JOIN … GROUP BY` : la liste reste correcte même pour un projet sans
+ * aucun calcul, et l'index `project_data_project_module_idx` la sert
+ * directement.
+ */
 export async function listProjects(
   ownerId: string,
-  options: { limit?: number; offset?: number } = {},
+  options: ListProjectsOptions = {},
   client?: Executor,
-): Promise<ProjectRow[]> {
-  const limit = Math.min(Math.max(options.limit ?? 50, 1), 200);
-  const offset = Math.max(options.offset ?? 0, 0);
-  const { rows } = await run<ProjectRow>(
+): Promise<ProjectWithCalculCountRow[]> {
+  const { limit, offset } = bornerPagination(options);
+  const recherche = options.search?.trim() ? motifRecherche(options.search.trim()) : null;
+
+  const { rows } = await run<ProjectWithCalculCountRow>(
     client,
-    `SELECT ${PROJECT_COLUMNS}
-       FROM projects
-      WHERE owner_id = $1 AND deleted_at IS NULL
-      ORDER BY updated_at DESC
-      LIMIT $2 OFFSET $3`,
-    [ownerId, limit, offset],
+    `SELECT ${PROJECT_COLUMNS_PREFIXED},
+            (SELECT count(*) FROM project_data d WHERE d.project_id = p.id)::text
+              AS calcul_count
+       FROM projects p
+      WHERE p.owner_id = $1
+        AND p.deleted_at IS NULL
+        AND ($2::project_status IS NULL OR p.status = $2)
+        AND ($3::text IS NULL
+             OR p.name ILIKE $3 ESCAPE '\\'
+             OR coalesce(p.client_name, '') ILIKE $3 ESCAPE '\\')
+      ORDER BY p.updated_at DESC, p.id DESC
+      LIMIT $4 OFFSET $5`,
+    [ownerId, options.status ?? null, recherche, limit, offset],
   );
   return rows;
 }
 
-/** Nombre de projets non supprimés d'un propriétaire. */
-export async function countProjects(ownerId: string, client?: Executor): Promise<number> {
+/**
+ * Nombre total de projets correspondant aux mêmes filtres que `listProjects`.
+ * Sert le champ `total` de la réponse : la pagination doit compter l'ensemble,
+ * pas la page.
+ */
+export async function countProjects(
+  ownerId: string,
+  options: Pick<ListProjectsOptions, 'status' | 'search'> = {},
+  client?: Executor,
+): Promise<number> {
+  const recherche = options.search?.trim() ? motifRecherche(options.search.trim()) : null;
+
   const { rows } = await run<{ total: string }>(
     client,
     `SELECT count(*)::text AS total
-       FROM projects
-      WHERE owner_id = $1 AND deleted_at IS NULL`,
-    [ownerId],
+       FROM projects p
+      WHERE p.owner_id = $1
+        AND p.deleted_at IS NULL
+        AND ($2::project_status IS NULL OR p.status = $2)
+        AND ($3::text IS NULL
+             OR p.name ILIKE $3 ESCAPE '\\'
+             OR coalesce(p.client_name, '') ILIKE $3 ESCAPE '\\')`,
+    [ownerId, options.status ?? null, recherche],
   );
   return Number(rows[0]?.total ?? 0);
 }
@@ -156,7 +225,14 @@ export async function getProject(
 // Projets — écritures
 // ---------------------------------------------------------------------------
 
-/** Crée un projet appartenant à `ownerId`. */
+/**
+ * Crée un projet appartenant à `ownerId`.
+ *
+ * `ownerId` vient de `res.locals.user`, jamais du corps de la requête : c'est
+ * la raison pour laquelle il est un paramètre distinct de `input`, et non un
+ * champ de celui-ci. Un `ownerId` envoyé par un client ne peut donc pas se
+ * glisser ici par mégarde.
+ */
 export async function createProject(
   ownerId: string,
   input: CreateProjectInput,
@@ -230,6 +306,10 @@ export async function updateProject(
 /**
  * Suppression logique : le projet disparaît de l'application mais la ligne
  * est conservée. Renvoie `false` si le projet n'appartient pas à `ownerId`.
+ *
+ * Le `deleted_at IS NULL` final rend l'opération idempotente et fait qu'une
+ * seconde suppression renvoie `false` — donc `404` côté route, ce qui est
+ * exact : du point de vue du client, le projet n'existe déjà plus.
  */
 export async function softDeleteProject(
   id: string,
@@ -246,74 +326,25 @@ export async function softDeleteProject(
   return (result.rowCount ?? 0) > 0;
 }
 
-// ---------------------------------------------------------------------------
-// Données de projet (résultats de calcul)
-// ---------------------------------------------------------------------------
-
 /**
- * Enregistre le résultat d'un module de calcul.
+ * Le projet existe-t-il, vivant, et appartient-il bien à `ownerId` ?
  *
- * L'insertion passe par un `INSERT … SELECT` filtré sur `projects.owner_id` :
- * si le projet n'appartient pas à `ownerId`, aucune ligne n'est insérée et la
- * fonction renvoie `null`. La vérification est donc faite par la base, dans la
- * même requête — impossible de l'oublier côté appelant.
+ * Utilisé avant un calcul archivé : inutile de rapatrier toute la ligne pour
+ * répondre à une question booléenne. Renvoie `false` aussi bien pour un projet
+ * inexistant que pour celui d'un autre client — c'est volontaire, l'appelant
+ * ne doit pas pouvoir distinguer les deux cas.
  */
-export async function saveProjectData(
-  projectId: string,
+export async function projectBelongsToOwner(
+  id: string,
   ownerId: string,
-  input: SaveProjectDataInput,
   client?: Executor,
-): Promise<ProjectDataRow | null> {
-  const { rows } = await run<ProjectDataRow>(
+): Promise<boolean> {
+  const { rows } = await run<{ existe: boolean }>(
     client,
-    `INSERT INTO project_data (project_id, module, inputs, results, engine_version)
-     SELECT p.id, $3, $4::jsonb, $5::jsonb, $6
-       FROM projects p
-      WHERE p.id = $1 AND p.owner_id = $2 AND p.deleted_at IS NULL
-     RETURNING ${PROJECT_DATA_COLUMNS}`,
-    [
-      projectId,
-      ownerId,
-      input.module,
-      JSON.stringify(input.inputs ?? {}),
-      JSON.stringify(input.results ?? {}),
-      input.engineVersion,
-    ],
+    `SELECT true AS existe
+       FROM projects
+      WHERE id = $1 AND owner_id = $2 AND deleted_at IS NULL`,
+    [id, ownerId],
   );
-  return rows[0] ?? null;
-}
-
-/** Historique des calculs d'un projet, du plus récent au plus ancien. */
-export async function listProjectData(
-  projectId: string,
-  ownerId: string,
-  options: { module?: string; limit?: number } = {},
-  client?: Executor,
-): Promise<ProjectDataRow[]> {
-  const limit = Math.min(Math.max(options.limit ?? 100, 1), 500);
-  const { rows } = await run<ProjectDataRow>(
-    client,
-    `SELECT ${PROJECT_DATA_COLUMNS_PREFIXED}
-       FROM project_data d
-       JOIN projects p ON p.id = d.project_id
-      WHERE d.project_id = $1
-        AND p.owner_id = $2
-        AND p.deleted_at IS NULL
-        AND ($3::text IS NULL OR d.module = $3)
-      ORDER BY d.computed_at DESC
-      LIMIT $4`,
-    [projectId, ownerId, options.module ?? null, limit],
-  );
-  return rows;
-}
-
-/** Dernier résultat connu d'un module donné pour un projet. */
-export async function getLatestProjectData(
-  projectId: string,
-  ownerId: string,
-  module: string,
-  client?: Executor,
-): Promise<ProjectDataRow | null> {
-  const rows = await listProjectData(projectId, ownerId, { module, limit: 1 }, client);
-  return rows[0] ?? null;
+  return rows.length > 0;
 }

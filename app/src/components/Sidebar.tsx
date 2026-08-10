@@ -32,8 +32,8 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { to: '/', label: 'Tableau de bord', icon: <DashboardIcon /> },
-  { to: '/projets', label: 'Projets', icon: <ProjectsIcon />, upcoming: true },
-  { to: '/calculs', label: 'Calculs', icon: <CalculationsIcon />, upcoming: true },
+  { to: '/projets', label: 'Projets', icon: <ProjectsIcon /> },
+  { to: '/calculs', label: 'Calculs', icon: <CalculationsIcon /> },
   { to: '/rapports', label: 'Rapports', icon: <ReportsIcon />, upcoming: true },
   { to: '/parametres', label: 'Paramètres', icon: <SettingsIcon /> },
 ];
