@@ -126,6 +126,13 @@ const MESSAGE_COMPTE_INTROUVABLE = 'Ce compte est introuvable.';
  * Le corps renvoyé est **identique** à celui d'une URL inexistante
  * (`middleware/not-found.ts`), détails compris : rien, pas même la forme de la
  * réponse, ne distingue « vous n'avez pas le droit » de « cela n'existe pas ».
+ *
+ * ⚠ `req.path`, dans un routeur monté, est le chemin **relatif au point de
+ *   montage** (`/users`, et non `/api/admin/users`). Le 404 ordinaire, lui, est
+ *   produit au niveau de l'application et renvoie le chemin complet. Renvoyer
+ *   ici `req.path` tel quel suffirait donc à trahir qu'un routeur est monté sous
+ *   `/api/admin` : la seule forme de la réponse répondrait à la question qu'on
+ *   refuse précisément de laisser poser. D'où `req.baseUrl + req.path`.
  */
 const garde404: RequestHandler = (req, res, next) => {
   requireAdmin(req, res, (erreur?: unknown) => {
@@ -133,7 +140,7 @@ const garde404: RequestHandler = (req, res, next) => {
       next(
         notFound('Cette ressource n’existe pas.', {
           method: req.method,
-          path: req.path.slice(0, 200),
+          path: `${req.baseUrl}${req.path}`.slice(0, 200),
         }),
       );
       return;

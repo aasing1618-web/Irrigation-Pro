@@ -231,6 +231,37 @@ son expiration, mais toute requête est refusée puisque le statut est revérifi
 
 ---
 
+## D-012 — Ce qui est protégé, c'est la chaîne de calcul, pas les constantes publiques
+
+**Question posée (2026-08-10) :** le module des canaux renvoie le coefficient de
+Strickler `Ks = 1/n`. L'afficher dans le rapport revient à publier `n` — donc la
+table I, celle des rugosités de Manning. Faut-il le retirer au nom de D-007 ?
+
+**Décidé : on l'affiche.**
+
+**Pourquoi.** Les coefficients de Manning ne sont pas notre savoir-faire : ce
+sont des données d'ingénierie publiques, tabulées dans tous les manuels
+d'hydraulique — la spécification elle-même cite sa source, un site public. Les
+cacher ne protégerait rien, et coûterait cher : **une note de calcul
+hydraulique qui tait la rugosité retenue n'est pas défendable.** Un ingénieur
+qui relit le dimensionnement doit pouvoir vérifier l'hypothèse ; un rapport qui
+la dissimule perd sa crédibilité professionnelle, c'est-à-dire exactement ce
+que le client achète.
+
+**Ce qui reste protégé, et ne sortira jamais :** l'enchaînement des modules, la
+façon dont une dose devient un cycle puis un débit puis un canal, les seuils de
+contrôle métier, et le code qui l'exécute. C'est la chaîne qui a de la valeur,
+pas les constantes qu'elle consomme.
+
+**Règle générale, pour trancher les cas suivants :** une valeur publiée dans la
+littérature technique peut apparaître dans un rapport dès lors qu'elle est une
+**hypothèse de calcul que le lecteur doit pouvoir vérifier**. Une valeur qui
+n'existe que parce que nous l'avons établie ne sort pas. En cas de doute, la
+question à poser est : « un confrère pourrait-il exiger cette valeur pour
+contrôler mon travail ? »
+
+---
+
 ## D-011 — Nous sommes en prototype : durcissements reportés à la Vague 5
 
 **Décidé par le propriétaire le 2026-08-10.** Le produit est en construction et

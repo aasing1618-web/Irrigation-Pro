@@ -18,6 +18,7 @@ import { authRouter } from './auth.routes.js';
 import { calculsRouter } from './calculs.routes.js';
 import { healthRouter } from './health.routes.js';
 import { projectsRouter } from './projects.routes.js';
+import { reportsRouter } from './reports.routes.js';
 
 export const apiRouter: Router = Router();
 
@@ -35,3 +36,9 @@ apiRouter.use('/projects', projectsRouter);
 
 // → /api/admin/users…, /api/admin/activite (Vague 3, réservé au rôle ADMIN)
 apiRouter.use('/admin', adminRouter);
+
+// → /api/projects/:id/reports et /api/reports/:id… (Vague 3)
+//   Monté à la racine, et non sous un préfixe : les rapports se créent comme
+//   sous-ressource d'un projet et se téléchargent comme ressource autonome.
+//   Les chemins de projet non reconnus par `projectsRouter` retombent ici.
+apiRouter.use(reportsRouter);

@@ -77,9 +77,15 @@ Filtres facultatifs : `statut`, `role`, `recherche`, `limite`, `depuis`.
 
 ```json
 { "comptes": [ { "id", "email", "nomComplet", "societe", "role", "statut",
-  "doitChangerMotDePasse", "derniereConnexion", "creeLe", "nombreProjets" } ],
-  "total": 12 }
+  "doitChangerMotDePasse", "verrouilleJusqua", "derniereConnexion", "creeLe",
+  "nombreProjets" } ], "total": 12 }
 ```
+
+`verrouilleJusqua` est nul la plupart du temps ; il porte la date de fin du
+verrouillage anti-force-brute quand il y en a un. **C'est une information de
+dépannage indispensable** : sans elle, le propriétaire reçoit un appel « je ne
+peux plus me connecter » sans pouvoir distinguer un compte verrouillé pour
+quinze minutes d'un compte suspendu ou d'un mot de passe oublié.
 
 **Ne renvoie jamais `password_hash`**, sous aucune forme.
 
@@ -135,6 +141,29 @@ Ne contient jamais de secret : le filtre défensif de la Vague 1 reste actif.
 
 Pour la page d'accueil du dashboard : dernières connexions, échecs, créations.
 
+### Réponses des actions
+
+`suspendre`, `reactiver` et `reinitialiser-mot-de-passe` renvoient, en plus de
+ce qui est décrit ci-dessus, le `compte` mis à jour et le nombre de
+`sessionsRevoquees`. Le dashboard s'évite ainsi un aller-retour pour rafraîchir
+la fiche, et le propriétaire voit immédiatement l'effet de son action.
+
+### Deux refus qui restent en amont du contrôle de rôle
+
+La règle « une route d'administration appelée par un client renvoie `404` »
+s'applique **après** l'authentification. Deux refus lui sont donc antérieurs et
+ne peuvent pas devenir des `404` :
+
+- `401` — jeton absent, mal formé ou expiré. Le dashboard en a besoin pour
+  savoir qu'il doit rafraîchir sa session ;
+- `403 PASSWORD_CHANGE_REQUIRED` — compte qui n'a pas encore remplacé son mot
+  de passe temporaire.
+
+*Arbitrage du lead :* accepté. Ces réponses sont **identiques sur une URL
+d'administration existante et inexistante**, elles ne permettent donc aucune
+énumération. Elles révèlent seulement qu'un routeur vit sous `/api/admin`, ce
+qui n'est pas un secret exploitable. Le comportement est figé par un test.
+
 ### Garde-fous non négociables
 
 - **Un administrateur ne peut ni se suspendre lui-même, ni retirer son propre
@@ -163,7 +192,15 @@ Pour la page d'accueil du dashboard : dernières connexions, échecs, créations
 `activity_logs` : `REPORT_GENERATED`, `REPORT_DOWNLOADED`, `REPORT_DELETED`.
 
 `admin_actions` : `CREATE_ACCOUNT`, `UPDATE_ACCOUNT`, `SUSPEND`, `REACTIVATE`,
-`RESET_PASSWORD` — chacune avec son motif.
+`RESET_PASSWORD`.
+
+**Le motif n'est obligatoire que pour `SUSPEND` et `REACTIVATE`.** Une version
+antérieure de ce document disait « chacune avec son motif », en contradiction
+avec la section 2 qui ne prévoit de champ `motif` que sur ces deux routes.
+*Arbitrage du lead, 2026-08-10 :* couper l'accès à un client engage le
+propriétaire et doit être justifié ; créer un compte ou renommer une société
+n'a pas à l'être. Exiger un motif partout produirait des « RAS » qui videraient
+le champ de son sens là où il compte.
 
 **Aucun mot de passe temporaire ne doit apparaître dans un journal**, sous
 aucune forme, même partielle.

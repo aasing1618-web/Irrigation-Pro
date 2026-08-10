@@ -44,7 +44,11 @@ export type ActivityAction =
   | 'PROJECT_DELETED'
   | 'CALCUL_RUN'
   | 'CALCUL_SAVED'
-  | 'CALCUL_DELETED';
+  | 'CALCUL_DELETED'
+  // Vague 3 — rapports PDF (docs/API-VAGUE-3.md, § 4).
+  | 'REPORT_GENERATED'
+  | 'REPORT_DOWNLOADED'
+  | 'REPORT_DELETED';
 
 /** Une ligne de `activity_logs`. `id` est un `bigserial`, lu en texte. */
 export type ActivityLogRow = {
@@ -143,16 +147,55 @@ const ADMIN_ACTION_COLUMNS = `
  *    les rend pas acceptables.
  * ═══════════════════════════════════════════════════════════════════════════
  */
-const MOTS_SENSIBLES = ['password', 'token', 'secret', 'hash', 'authorization'] as const;
+/**
+ * Le filet ne sert à rien s'il ne parle pas la langue du code qu'il surveille.
+ * Ce projet est écrit en français : l'erreur la plus probable n'est pas
+ * `password`, c'est `motDePasse`. Les deux langues sont donc couvertes.
+ *
+ * La comparaison se fait sur la clé mise en minuscules, sans accents et sans
+ * séparateurs — `motDePasse`, `mot_de_passe`, `MOT-DE-PASSE` et `motdepasse`
+ * sont donc tous attrapés par la même entrée `motdepasse`.
+ */
+const MOTS_SENSIBLES = [
+  // anglais
+  'password',
+  'token',
+  'secret',
+  'hash',
+  'authorization',
+  'credential',
+  'apikey',
+  // français
+  'motdepasse',
+  'jeton',
+  'empreinte',
+  'secrete',
+  'clesecrete',
+  'cleapi',
+] as const;
+// Volontairement ABSENTS : « identifiant » et « cle » seuls. Ils masqueraient
+// des champs parfaitement légitimes (`identifiantProjet`, `cleModule`), et un
+// journal trop caviardé ne sert plus à personne. Ce filet vise les secrets,
+// pas tout ce qui y ressemble de loin.
 
 const VALEUR_RETIRÉE = '[retiré]';
 
 /** Profondeur maximale explorée dans `metadata`. */
 const PROFONDEUR_MAX = 6;
 
-/** Le nom de cette clé évoque-t-il un secret ? */
+/**
+ * Le nom de cette clé évoque-t-il un secret ?
+ *
+ * La clé est mise en minuscules, débarrassée de ses accents et de ses
+ * séparateurs avant comparaison : `motDePasse`, `mot_de_passe`, `MOT-DE-PASSE`
+ * et `Mot De Passe` se ramènent tous à `motdepasse`, et `secrète` à `secrete`.
+ */
 function cléSensible(clé: string): boolean {
-  const normalisée = clé.toLowerCase();
+  const normalisée = clé
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '') // retire les accents
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, ''); // retire tirets, blancs souligné, espaces
   return MOTS_SENSIBLES.some((mot) => normalisée.includes(mot));
 }
 

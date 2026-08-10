@@ -177,6 +177,15 @@ function decimalesUtiles(valeurAbsolue: number): number {
   return 4;
 }
 
+/**
+ * En deçà de ce seuil, une valeur est traitée comme un résidu de calcul et non
+ * comme une grandeur. Choisi à 1e-9 : très au-dessus du bruit de la virgule
+ * flottante (~1e-14 sur nos ordres de grandeur), et très en dessous de toute
+ * grandeur physique que ce logiciel manipule — le plus petit débit qui ait un
+ * sens en irrigation se compte en litres par heure, soit ~1e-7 m³/s.
+ */
+const SEUIL_RESIDU = 1e-9;
+
 /** Groupe les milliers par espaces : « 12 345,6 ». */
 function grouperMilliers(entier: string): string {
   return entier.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
@@ -194,6 +203,15 @@ export function formaterNombre(valeur: number): string {
   if (valeur === 0) return '0';
 
   const absolue = Math.abs(valeur);
+
+  // Résidu de calcul en virgule flottante. Une résolution numérique qui a
+  // convergé laisse un écart de l'ordre de 1e-14 : ce n'est pas une grandeur
+  // physique, c'est la limite de précision de la machine. L'imprimer tel quel
+  // (« −7,090e-14 m³/s ») dans un document remis à un client final donne
+  // l'impression d'une précision absurde, et invite à des questions qui n'ont
+  // pas de réponse utile. On l'affiche pour ce qu'il est : zéro, à la
+  // précision près.
+  if (absolue < SEUIL_RESIDU) return '≈ 0';
 
   // Très petit ou très grand : la notation scientifique reste lisible là où
   // « 0,0000 » ou « 12 000 000 000 » ne disent plus rien.

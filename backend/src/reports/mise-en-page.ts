@@ -596,6 +596,21 @@ export class Disposition {
    * La page de garde ne reçoit pas d'en-tête courant : elle porte déjà le titre
    * en grand. Elle reçoit en revanche le pied de page, qui porte la version du
    * moteur — information contractuelle qui doit figurer partout.
+   *
+   * ─────────────────────────────────────────────────────────────────────────
+   *  LE PIÈGE : ÉCRIRE DANS LA MARGE BASSE FABRIQUE DES PAGES BLANCHES
+   * ─────────────────────────────────────────────────────────────────────────
+   *  Un pied de page se dessine, par définition, **sous** la marge basse. Or
+   *  `pdfkit` ajoute automatiquement une page dès qu'un texte dépasse
+   *  `page.maxY()`, c'est-à-dire `hauteur - marges.bas`. Écrire naïvement le
+   *  pied de page ici produit donc une page vierge **par appel** : un document
+   *  de 4 pages en sortait à 12, et le pied atterrissait sur la page suivante
+   *  plutôt que sur la sienne.
+   *
+   *  On neutralise donc la marge basse le temps de l'habillage, page par page,
+   *  et on la restaure ensuite. C'est le seul moment du générateur où l'on a le
+   *  droit d'écrire hors de la zone de contenu.
+   * ─────────────────────────────────────────────────────────────────────────
    */
   async finaliser(): Promise<Buffer> {
     if (this.finalise) return this.termine;
@@ -609,6 +624,11 @@ export class Disposition {
 
       const gauche = this.doc.page.margins.left;
       const largeur = this.doc.page.width - gauche - this.doc.page.margins.right;
+
+      // Voir l'explication ci-dessus : sans cela, chaque pied de page engendre
+      // une page blanche supplémentaire.
+      const margeBasse = this.doc.page.margins.bottom;
+      this.doc.page.margins.bottom = 0;
 
       // --- En-tête courant (toutes les pages sauf la garde) ---
       if (index > 0) {
@@ -663,6 +683,8 @@ export class Disposition {
           align: 'right',
           lineBreak: false,
         });
+
+      this.doc.page.margins.bottom = margeBasse;
     }
 
     this.doc.flushPages();
