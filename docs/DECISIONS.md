@@ -231,6 +231,27 @@ son expiration, mais toute requête est refusée puisque le statut est revérifi
 
 ---
 
+## D-011 — Nous sommes en prototype : durcissements reportés à la Vague 5
+
+**Décidé par le propriétaire le 2026-08-10.** Le produit est en construction et
+n'a aucun client réel. Certains durcissements sont donc **volontairement
+reportés**, et non oubliés. Cette liste doit être reprise telle quelle en
+Vague 5, avant toute mise en avant du produit comme « prêt ».
+
+| À faire avant la mise en service | Pourquoi |
+|---|---|
+| **Réinitialiser le mot de passe de la base Supabase** | La valeur actuelle est faible (mots du dictionnaire + suffixe numérique) pour une base joignable depuis internet, et elle a transité en clair dans une sortie de terminal |
+| Regénérer `JWT_SECRET` | Même raison de principe : tout secret ayant existé pendant la phase de prototype doit être renouvelé avant la production |
+| Créer un projet Supabase **séparé** pour les tests | `TEST_DATABASE_URL` est vide : aucun test ne touche la base, mais le jour où l'on voudra des tests d'intégration réels, ils ne devront jamais viser la base de production |
+| Activer RLS sur `schema_migrations` | Les 7 tables du produit sont verrouillées ; cette table technique ne l'est pas. Les droits publics étant déjà révoqués, le risque est nul aujourd'hui — mais la défense en profondeur veut qu'elle le soit aussi |
+| Revoir `trust proxy` | Calibré pour exactement un reverse proxy ; à réajuster quand l'hébergement sera choisi, sinon le limiteur de débit verra la même IP pour tout le monde |
+| Remplacer le limiteur de débit en mémoire | Il ne fonctionne que sur un serveur unique. Si l'API est répliquée un jour, il faudra un magasin partagé |
+
+**Ce report est un choix assumé, pas une négligence.** Aucune de ces lignes ne
+doit disparaître sans avoir été faite.
+
+---
+
 ## D-008 — Aucun paiement, aucune licence technique
 
 Rappel du cadrage, inscrit ici pour qu'aucune vague ultérieure ne le remette en

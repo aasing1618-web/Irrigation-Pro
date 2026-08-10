@@ -99,13 +99,10 @@ jamais un message technique, jamais un message anglais de bibliothèque.
 
 ### Modules volontairement absents
 
-- **`11_Application_Kr_LR`** (coefficient de réduction `Kr`, besoin en lixiviation)
-  n'est **pas implémenté** : sa spécification est tronquée dans la source
-  transmise (formule complète de `IRn` et méthodes alternatives de `Kr`
-  inconnues). Voir MOTEUR-SOUS-PRESSION.md §12. **Ne rien inventer** : une
-  formule approximative produirait un dimensionnement faux, et c'est le genre
-  d'erreur qui se voit sur le terrain des années plus tard. Réclamer la fin du
-  document avant de traiter ce module.
+- **Le module `Kr` / besoin en lixiviation est retiré du périmètre du produit**,
+  par décision du propriétaire (2026-08-10) : sa spécification était incomplète
+  et il est peu utilisé en pratique. Ne pas le réintroduire sans une
+  spécification complète et une validation explicite.
 - **`10_Application_RAM`** (choix d'un goutteur autorégulant) est un exercice
   résolu autonome, hors du pipeline de conception ; il n'est pas encore porté.
 - **Table H** (pertes d'eau dans les canaux non revêtus) est **documentaire

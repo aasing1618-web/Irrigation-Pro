@@ -22,7 +22,7 @@ Le moteur s'exécute **exclusivement côté serveur** (décision D-007).
                    │              7_Reseau_Hazen_Williams ◄── 9_Coeff_Fn (table F(n))
                    │                             ▼
                    │                     8_HMT_Pompe
-   (exemples résolus indépendants : 10_Application_RAM, 11_Application_Kr_LR)
+   (exemple résolu indépendant : 10_Application_RAM)
 ```
 
 ---
@@ -455,30 +455,19 @@ RAM17 à (20 ; 0,4) = 127 m → **insuffisant**. RAM20 = 225 m → **suffisant**
 
 ---
 
-## 12. Exemple résolu `11_Application_Kr_LR` — ⚠️ spécification incomplète
+## 12. Module retiré du périmètre
 
-Comparaison des méthodes de coefficient de réduction `Kr` et calcul du besoin en
-lixiviation. Formules-cadre connues :
+Le module de **coefficient de réduction `Kr` et de besoin en lixiviation**
+(feuille `11_Application_Kr_LR` du classeur) est **retiré du périmètre du
+produit**, par décision du propriétaire du 2026-08-10 : sa spécification était
+tronquée dans la source transmise, et il est peu utilisé en pratique.
 
-```
-ETcrop-loc = ETcrop_pointe × Kr(GC)
-LRt        = ECw / (2 × ECe_max)
-LR         = LRt × (ETcrop-loc / Ea)
-IRn        = ETcrop-loc + …            ← la suite manque
-```
+Ne pas le réintroduire sans une spécification complète et une validation
+explicite. Le reste du classeur est inchangé.
 
-**La spécification de ce module est tronquée dans la source qui m'a été
-transmise.** Les méthodes alternatives de calcul de `Kr` (Keller, Freeman,
-Decroix…) et la formule complète de `IRn` ne sont pas connues.
-
-**Ce module ne doit pas être implémenté tant que sa spécification n'est pas
-complète.** Ne rien inventer : une formule d'irrigation approximative produit un
-dimensionnement faux, et c'est le genre d'erreur qui se voit sur le terrain des
-années plus tard. Réclamer la fin du document avant de le traiter.
-
-Les deux exemples résolus (`10` et `11`) sont de toute façon des **exercices
-pédagogiques autonomes**, hors du pipeline de conception : ils sont à traiter en
-dernier, après les modules 1 à 9.
+L'exemple résolu `10_Application_RAM` (choix d'un goutteur autorégulant) reste
+au périmètre : c'est un exercice autonome, hors du pipeline de conception, à
+traiter après les modules 1 à 9.
 
 ---
 

@@ -125,23 +125,25 @@ projet. Pour un client, ce qui ne lui appartient pas n'existe pas.
 
 ---
 
-## Réserves à lever
+## Réserves — tranchées par le propriétaire le 2026-08-10
 
-1. **Les tableaux climatiques mensuels des deux cas d'exemple n'ont pas été
-   transmis** — seules leurs sorties le sont. Les tests utilisent des
-   calendriers reconstitués qui reproduisent exactement les valeurs publiées.
-   Cela prouve que **les formules** sont justes, pas que **les données
-   d'exemple** le sont. À remplacer dès que les classeurs seront disponibles.
+1. **Calendriers d'exemple reconstitués : conservés.** Les tableaux climatiques
+   mensuels des deux cas d'exemple n'avaient pas été transmis, seulement leurs
+   sorties. Les calendriers reconstitués reproduisent exactement les valeurs
+   publiées ; le propriétaire a confirmé que cela suffit, les formules étant
+   vérifiées justes par ailleurs.
 
-2. **Ambiguïté sur le besoin total sous pression** (507,80375 mm) : selon que
-   l'on compte ou non le mois excédentaire, on obtient 507,80375 ou 517,80375.
-   Les deux sont exposés ; le dimensionnement utilise le second, car un mois
-   pluvieux ne doit pas subventionner un mois sec. À confirmer par l'auteur du
-   classeur.
+2. **Besoin total sous pression : méthode confirmée.** Le dimensionnement
+   plafonne les mois excédentaires à 0 (517,80375 mm), tandis que la valeur
+   fidèle au classeur (507,80375 mm) reste exposée. Un mois pluvieux ne
+   subventionne pas un mois sec.
 
-3. **Le module `11_Application_Kr_LR` n'est pas implémenté** : sa spécification
-   est tronquée dans la source transmise. Rien n'a été inventé.
+3. **Module `Kr` / besoin en lixiviation : retiré du périmètre.** Décision du
+   propriétaire — spécification incomplète et usage marginal. Rien d'autre n'a
+   été retiré.
 
-4. **Les modules de calcul n'ont pas encore été essayés à la main** dans
-   l'interface, écran par écran. Les tests couvrent le comportement ; ils ne
-   remplacent pas un essai par un praticien du métier.
+## Réserve encore ouverte
+
+**Les modules de calcul n'ont pas été essayés à la main dans l'interface**,
+écran par écran. Les tests couvrent le comportement ; ils ne remplacent pas un
+essai par un praticien du métier sur un cas réel.
