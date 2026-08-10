@@ -41,6 +41,18 @@ function listeSeparéeParVirgules(valeur: string): string[] {
   return [...new Set(valeur.split(',').map((element) => element.trim()).filter(Boolean))];
 }
 
+/**
+ * Dans un fichier `.env`, une variable laissée vide (`MA_VAR=`) doit signifier
+ * « non renseignée », et non « chaîne vide ». Sans cette conversion, une ligne
+ * vide laissée dans le modèle fait échouer la validation d'une variable
+ * pourtant facultative — et le serveur refuse de démarrer sans raison.
+ */
+const facultatif = <T extends z.ZodTypeAny>(schéma: T) =>
+  z.preprocess(
+    (valeur) => (typeof valeur === 'string' && valeur.trim() === '' ? undefined : valeur),
+    schéma.optional(),
+  );
+
 const schémaEnvironnement = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
@@ -59,24 +71,22 @@ const schémaEnvironnement = z.object({
         .min(1, 'variable obligatoire')
         .startsWith('postgres', 'doit commencer par « postgresql:// »'),
 
-  TEST_DATABASE_URL: z.string().min(1).optional(),
+  TEST_DATABASE_URL: facultatif(z.string().min(1)),
 
   // Connexion DIRECTE à la base (port 5432 chez Supabase), utilisée uniquement
   // par les migrations. Le pooler transactionnel (port 6543) gère mal le DDL
   // long et les verrous consultatifs ; l'application, elle, peut passer par le
   // pooler sans problème. Facultative : à défaut, les migrations utilisent
   // DATABASE_URL.
-  DIRECT_DATABASE_URL: z
-    .string()
-    .min(1)
-    .startsWith('postgres', 'doit commencer par « postgresql:// »')
-    .optional(),
+  DIRECT_DATABASE_URL: facultatif(
+    z.string().min(1).startsWith('postgres', 'doit commencer par « postgresql:// »'),
+  ),
 
   // Chemin vers un certificat d'autorité, si le certificat TLS du serveur de
   // base de données n'est pas vérifiable par le magasin d'autorités du système.
   // Facultative — et c'est la SEULE réponse acceptable à une erreur de
   // certificat : ne jamais désactiver la vérification TLS.
-  DATABASE_SSL_CA: z.string().min(1).optional(),
+  DATABASE_SSL_CA: facultatif(z.string().min(1)),
 
   // Hors production on tolère un secret de développement pour que le projet
   // démarre sans configuration ; en production le secret est obligatoire.
