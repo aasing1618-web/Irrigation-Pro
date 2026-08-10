@@ -13,6 +13,7 @@
 
 import { Router } from 'express';
 
+import { adminRouter } from './admin.routes.js';
 import { authRouter } from './auth.routes.js';
 import { calculsRouter } from './calculs.routes.js';
 import { healthRouter } from './health.routes.js';
@@ -31,3 +32,6 @@ apiRouter.use('/calculs', calculsRouter);
 
 // → /api/projects… et /api/projects/:id/calculs… (Vague 2)
 apiRouter.use('/projects', projectsRouter);
+
+// → /api/admin/users…, /api/admin/activite (Vague 3, réservé au rôle ADMIN)
+apiRouter.use('/admin', adminRouter);
