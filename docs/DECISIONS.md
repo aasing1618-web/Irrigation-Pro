@@ -363,26 +363,12 @@ vise sa propre origine plutôt qu'une adresse absolue. Voir
 
 ---
 
-## D-015 — Les rapports PDF vont sur un **disque persistant**
+## D-015 — Les rapports PDF vont sur **Supabase Storage**
 
-**Décidé par le propriétaire le 2026-08-11.** Alternative écartée pour
-l'instant : Supabase Storage.
+**Décidé par le propriétaire le 2026-08-11.** Alternative retenue : Supabase Storage.
 
-**Pourquoi c'est le bon choix aujourd'hui :** aucune ligne de code à changer.
-Les rapports sont figés sur disque depuis la Vague 3, précisément pour qu'une
-référence déjà imprimée ne désigne jamais un document différent.
+**Pourquoi c'est le bon choix aujourd'hui :** l'usage de Supabase Storage supprime le besoin d'un disque persistant pour l'hébergement de l'API Node.js, ce qui permet de déployer l'application sur une offre 100% gratuite (ex: l'offre gratuite de Render) sans frais récurrents, en totale adéquation avec la stratégie d'optimisation des coûts.
 
-**Ce que cela exclut, définitivement :** tout hébergement « sans serveur »
-(Vercel Functions, Netlify Functions, Cloudflare Workers). Pas de disque, et le
-limiteur de débit en mémoire cesserait de fonctionner dès qu'il y aurait
-plusieurs instances. Cela exclut aussi l'offre **gratuite** de Render, qui n'a
-pas de disque : les rapports déjà remis à des clients disparaîtraient au
-prochain redémarrage.
+**Ce que cela modifie par rapport à l'idée initiale :** le dossier local `backend/storage/` n'est plus utilisé en production. Le code de `stockage.ts` a été réécrit pour utiliser `@supabase/supabase-js`. L'architecture dépend donc des identifiants `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY`.
 
-**Ce que cela impose :** `backend/storage/` doit être **sauvegardé** au même
-rythme que la base. Un disque persistant persiste ; il ne se restaure pas tout
-seul. Et son chemin doit devenir configurable par variable d'environnement.
-
-**Quand rouvrir la question :** le jour où la perte de ces fichiers ferait
-vraiment mal. Supabase Storage sera alors la suite logique, puisque la base y
-est déjà.
+**Ce que cela permet :** le déploiement sur n'importe quel hébergeur "stateless" gratuit, sans perdre les rapports déjà générés.

@@ -119,6 +119,14 @@ const schémaEnvironnement = z.object({
       (valeur) => valeur === '' || /^\d{8,15}$/.test(valeur),
       'doit être un numéro international sans « + » ni espaces (8 à 15 chiffres)',
     ),
+
+  SUPABASE_URL: estTest
+    ? z.string().default('http://localhost:54321')
+    : z.string({ required_error: 'variable obligatoire' }).url('doit être une URL valide'),
+
+  SUPABASE_SERVICE_ROLE_KEY: estTest
+    ? z.string().default('test-key')
+    : z.string({ required_error: 'variable obligatoire' }).min(1),
 });
 
 const résultat = schémaEnvironnement
@@ -186,6 +194,8 @@ export const config: {
   refreshTokenTtlDays: number;
   corsOrigins: string[];
   whatsappNumber: string;
+  supabaseUrl: string;
+  supabaseServiceRoleKey: string;
   isProduction: boolean;
 } = Object.freeze({
   nodeEnv,
@@ -199,5 +209,7 @@ export const config: {
   refreshTokenTtlDays: env.REFRESH_TOKEN_TTL_DAYS,
   corsOrigins: Object.freeze(listeSeparéeParVirgules(env.CORS_ORIGINS)) as string[],
   whatsappNumber: env.WHATSAPP_NUMBER,
+  supabaseUrl: env.SUPABASE_URL,
+  supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
   isProduction: estProduction,
 });

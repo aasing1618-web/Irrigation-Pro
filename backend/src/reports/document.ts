@@ -108,7 +108,7 @@ export async function genererPdfRapport(
 function dessinerCouverture(d: Disposition, contenu: ContenuRapport): void {
   const { entete } = contenu;
 
-  d.espace(28);
+  d.espace(80);
   d.surTitre('Étude d’irrigation');
   d.espace(10);
   d.titreDocument(entete.projetNom);
@@ -318,7 +318,13 @@ function dessinerObservations(d: Disposition, contenu: ContenuRapport, rang: num
  * support de vente.
  */
 function dessinerMentionFinale(d: Disposition): void {
-  d.espace(14);
+  const disponible = d.limiteBasse - d.doc.y;
+  if (disponible > 40) {
+    d.espace(disponible - 40);
+  } else {
+    d.espace(14);
+  }
+  
   d.filet(COULEURS.traitFin);
   d.paragraphe(
     'Document produit automatiquement par Irrigation Pro à partir des données saisies ' +

@@ -21,6 +21,8 @@
 import cors, { type CorsOptions } from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { pinoHttp } from 'pino-http';
 
 import { apiRouter } from './api/index.js';
@@ -140,6 +142,33 @@ export function createApp(): Express {
 
   // Toute l'API métier, protégée par le limiteur général.
   app.use('/api', apiRateLimiter, apiRouter);
+
+  // Filet de sécurité : l'API doit renvoyer du JSON 404, jamais tomber dans le fallback HTML
+  app.all(/^\/api/, notFoundHandler);
+
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+  // Service de l'interface administrateur sous /admin
+  const adminDist = path.resolve(__dirname, '../../admin/dist');
+  app.use('/admin', express.static(adminDist));
+  app.use('/admin', (req, res, next) => {
+    if (req.method === 'GET') {
+      res.sendFile(path.resolve(adminDist, 'index.html'));
+    } else {
+      next();
+    }
+  });
+
+  // Service de l'application cliente sous /
+  const appDist = path.resolve(__dirname, '../../app/dist');
+  app.use(express.static(appDist));
+  app.use((req, res, next) => {
+    if (req.method === 'GET') {
+      res.sendFile(path.resolve(appDist, 'index.html'));
+    } else {
+      next();
+    }
+  });
 
   app.use(notFoundHandler);
   app.use(errorHandler);

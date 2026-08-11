@@ -9,7 +9,7 @@ document :
 
 1. **Pas de nom de domaine pour l'instant.** On se débrouille avec les
    sous-domaines gratuits des hébergeurs.
-2. **Les PDF vont sur un disque persistant.**
+2. **Les PDF vont sur Supabase Storage.**
 
 ---
 
@@ -17,7 +17,7 @@ document :
 
 | Composant | Nature | Contrainte |
 |---|---|---|
-| `backend/` | Processus Node en continu | **Écrit des fichiers sur disque** et tient son limiteur de débit en mémoire → une seule instance, avec un disque qui persiste |
+| `backend/` | Processus Node en continu | **Écrit sur Supabase Storage** et tient son limiteur de débit en mémoire → hébergement Node "stateless" classique |
 | Base PostgreSQL | Déjà chez **Supabase** | Rien à faire |
 | `app/` | Fichiers statiques | Doit partager l'origine de l'API — voir plus bas |
 | `admin/` | Fichiers statiques | Idem : il s'authentifie par le même cookie |
@@ -56,8 +56,8 @@ deux hébergeurs. Passer à `SameSite=None` rouvrirait la CSRF : refusé.
                           │
          ┌────────────────┼─────────────────┐
          ▼                ▼                 ▼
-  disque persistant   Supabase        (rien d'autre)
-  les PDF            la base
+  Supabase Storage    Supabase        (rien d'autre)
+      les PDF         la base
 ```
 
 Le **site vitrine** reste à part, sur n'importe quel hébergement statique
@@ -95,27 +95,18 @@ héberger l'interface chez Vercel. Sinon, la topologie ci-dessus est plus simple
 
 ---
 
-## Les PDF — décidé : disque persistant
+## Les PDF — décidé : Supabase Storage
 
-Les rapports sont **figés sur disque** et non régénérés : une référence déjà
-imprimée ne doit jamais désigner un document différent. `backend/storage/`
+Les rapports sont **figés** sur Supabase et non régénérés : une référence déjà
+imprimée ne doit jamais désigner un document différent. Le bucket `rapports`
 contient donc des données **irremplaçables**, au même titre que la base.
 
-**Décision du propriétaire : disque persistant.** Aucune ligne de code à changer.
+**Décision du propriétaire (2026-08-11, annule D-015) : Supabase Storage.** Le
+backend a été modifié pour utiliser le SDK Supabase.
 
-Trois conséquences à ne pas oublier :
-
-1. **Un hébergement « sans serveur » est exclu** (Vercel Functions, Netlify
-   Functions, Cloudflare Workers) : pas de disque, et le limiteur de débit en
-   mémoire cesse de fonctionner dès qu'il y a plusieurs instances.
-2. **Le disque doit être monté sur le chemin de `backend/storage/`**, et ce
-   chemin doit être configurable par variable d'environnement.
-3. **Il faut le sauvegarder.** Un disque persistant n'est pas une sauvegarde :
-   il persiste, mais il ne se restaure pas tout seul. Prévoir une copie
-   régulière, au même rythme que celle de la base.
-
-Le jour où le volume de clients rendra la perte douloureuse, Supabase Storage
-sera la suite logique — mais ce n'est pas aujourd'hui.
+Conséquence majeure :
+**Le serveur Node n'a plus besoin de disque persistant.** On peut l'héberger sur
+une offre 100% gratuite (ex. Render Free).
 
 ---
 
@@ -126,14 +117,9 @@ sous-domaine gratuit, TLS automatique.
 
 | Hébergeur | Sous-domaine | Remarque |
 |---|---|---|
-| **Render** | `*.onrender.com` | Le plus simple à tenir. Le disque persistant demande l'offre payante (~7 $/mois) : **l'offre gratuite met le service en veille et n'a pas de disque** |
-| **Fly.io** | `*.fly.dev` | Volumes persistants, un peu plus technique |
-| **Railway** | `*.up.railway.app` | Volumes, facturation à l'usage |
-
-L'offre gratuite de Render **ne convient pas** : sans disque, les rapports déjà
-générés disparaîtraient au prochain redémarrage. Un rapport qui s'évapore après
-avoir été remis à un client, c'est le genre d'incident qui coûte plus cher que
-l'abonnement.
+| **Render** | `*.onrender.com` | L'offre gratuite convient parfaitement puisqu'on n'a plus besoin de disque. Idéal pour ce projet. |
+| **Fly.io** | `*.fly.dev` | Un peu plus technique |
+| **Railway** | `*.up.railway.app` | Facturation à l'usage |
 
 ---
 
@@ -147,7 +133,8 @@ DATABASE_URL=            # pooler Supabase, port 6543
 JWT_SECRET=              # REGÉNÉRÉ (D-011), jamais celui du prototype
 PORT=
 TRUST_PROXY=             # à recalibrer selon l'hébergeur (D-011)
-STORAGE_DIR=             # chemin du disque persistant monté
+SUPABASE_URL=            # URL de l'API Supabase
+SUPABASE_SERVICE_ROLE_KEY= # Clé secrète de rôle service pour écrire les PDF
 CORS_ORIGINS=            # inutile en origine unique ; à laisser vide
 ```
 
@@ -163,9 +150,9 @@ Reprise de **D-011**, à ne pas rogner :
 - [ ] **Regénérer `JWT_SECRET`** — tout secret ayant existé en prototype est brûlé
 - [ ] Écrire le service statique dans Express (le morceau manquant ci-dessus)
 - [ ] Recalibrer `trust proxy`, sinon le limiteur de débit voit la même adresse IP pour tout le monde
-- [ ] Rendre le chemin de `backend/storage/` configurable et le pointer sur le disque monté
+- [ ] Renseigner `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` en production
+- [ ] Créer le bucket `rapports` (public ou privé avec politique d'accès) sur Supabase
 - [ ] Activer RLS sur `schema_migrations`
-- [ ] Mettre en place la **sauvegarde du disque** en même temps que celle de la base
 - [ ] Brancher une supervision gratuite sur `/health` (UptimeRobot ou équivalent)
 - [ ] **Essayer la chaîne complète dans un navigateur** : connexion, F5, fermeture de l'onglet, retour le lendemain
 

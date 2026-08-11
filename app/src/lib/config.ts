@@ -36,10 +36,8 @@ function isLoopback(url: URL): boolean {
 export function resolveApiUrl(rawValue: string | undefined, isDev: boolean): string {
   const raw = (rawValue ?? (isDev ? DEFAULT_DEV_API_URL : '')).trim();
 
-  if (raw === '') {
-    throw new ConfigurationError(
-      "L'adresse du serveur Irrigation Pro n'est pas configurée (VITE_API_URL).",
-    );
+  if (raw === '' || raw.startsWith('/')) {
+    return stripTrailingSlash(raw);
   }
 
   let url: URL;

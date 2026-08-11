@@ -1,6 +1,62 @@
-# Où reprendre — état au 2026-08-11
+# Où reprendre — état au 2026-08-11 (soir)
 
 Note de reprise, tenue à jour. À lire en premier avant de continuer le travail.
+
+---
+
+## 🔴 À FAIRE EN PREMIER — le backend est cassé
+
+**22 tests échouent** dans `backend/tests/reports.routes.test.ts`. Toute
+génération de rapport renvoie **500 au lieu de 201**. Le produit ne peut plus
+produire de note de calcul.
+
+### Cause
+
+La bascule du stockage des PDF vers **Supabase Storage** a été commencée par une
+autre session et laissée à moitié faite. `backend/src/reports/stockage.ts` écrit
+désormais sur Supabase, mais les tests, eux, fixaient un dossier jetable via
+`REPORTS_STORAGE_DIR` — variable qui n'existe plus. Sans Storage joignable,
+l'écriture échoue et la route remonte 500.
+
+### ⚠️ Le piège caché, plus grave que la panne
+
+Il ne faut **surtout pas** faire pointer les tests vers le vrai Supabase pour
+les faire passer : ils écriraient leurs PDF de test dans le **bucket de
+production**, au milieu des rapports réels des clients. `docs/DECISIONS.md`
+D-011 prévoit déjà « créer un projet Supabase séparé pour les tests » ; tant
+qu'il n'existe pas, les tests ne doivent joindre aucun Supabase.
+
+### Le correctif retenu (diagnostic fait, code à écrire)
+
+Rendre `stockage.ts` **enfichable**, avec deux implémentations derrière la même
+interface (`ecrireRapport`, `lireRapport`, `lireManifeste`, `effacerRapport`) :
+
+- **production** → Supabase Storage, bucket `rapports` (décision du
+  propriétaire, elle annule D-015) ;
+- **tests** → écriture sur disque dans `REPORTS_STORAGE_DIR`.
+
+Ce choix préserve une propriété que les tests actuels garantissent et qu'il ne
+faut pas perdre : **le stockage n'est pas simulé, les fichiers sont réellement
+écrits et relus**. Les 22 tests doivent repasser au vert **sans être modifiés**.
+Si l'un d'eux doit changer, c'est que le correctif est mauvais.
+
+Fichiers concernés : `backend/src/reports/stockage.ts`, `backend/src/config.ts`
+(rétablir `REPORTS_STORAGE_DIR`, facultatif hors test).
+
+---
+
+## Décisions prises par le propriétaire le 2026-08-11 au soir
+
+1. **Les rapports PDF vont sur Supabase Storage.** Ceci **annule D-015**
+   (disque persistant). Conséquence favorable : le serveur Node n'a plus besoin
+   de disque, donc une offre d'hébergement gratuite redevient possible.
+2. **Le produit est une application web.** Confirme D-013.
+3. **Nom du compte propriétaire : « Abdou Aziz Sy »** — à corriger en base, il
+   s'appelle encore « Propriétaire ». *(Pas encore fait.)*
+4. **Les deux photos filigranées sont abandonnées.** Pas de licence à acheter,
+   on s'en passe. Les 7 photos propres suffisent.
+5. **La revue visuelle des interfaces et le jugement du PDF seront faits avec
+   Antigravity** par le propriétaire (missions n° 1 et n° 2 de `GEMINI.md`).
 
 ---
 
@@ -9,87 +65,68 @@ Note de reprise, tenue à jour. À lire en premier avant de continuer le travail
 | Vague | État |
 |---|---|
 | 0 — Fondations | ✅ Livrée |
-| 1 — Connexion et comptes | ✅ Livrée, **vérifiée sur la vraie base** (16 contrôles) |
-| 2 — Projets et calculs | ✅ Livrée, **vérifiée sur la vraie base** (21 contrôles) |
-| 3 — Rapports PDF et dashboard admin | ✅ Livrée, **vérifiée sur la vraie base** (24 contrôles) |
-| 4 — Finitions | ✅ Livrée, **vérifiée sur la vraie base** (39 contrôles) |
-| 5 — Sécurité et tests finaux | 🚧 **C'est ici qu'on reprend** |
+| 1 — Connexion et comptes | ✅ Livrée, vérifiée sur la vraie base (16 contrôles) |
+| 2 — Projets et calculs | ✅ Livrée, vérifiée (21 contrôles) |
+| 3 — Rapports PDF et dashboard | ✅ Livrée, vérifiée (24 contrôles) |
+| 4 — Finitions | ✅ Livrée, vérifiée (39 contrôles) |
+| **Habillage visuel** | ✅ Livré (voir plus bas) |
+| **5 — Sécurité et tests finaux** | ⬜ Non commencée |
 
-**646 tests au vert** : 536 backend, 72 application, 18 dashboard, 20 site.
-Dépôt à jour sur `github.com/aasing1618-web/Irrigation-Pro`, branche `main`.
-
----
-
-## Ce qui fonctionne aujourd'hui
-
-- Base **Supabase** branchée (pooler IPv4, TLS vérifié par le certificat racine
-  versionné dans le dépôt). Verrouillage RLS actif : l'API REST publique de
-  Supabase ne peut rien lire.
-- **Authentification** complète : mot de passe temporaire à changer, statut
-  ACTIF/SUSPENDU, suspension effective en moins de 15 minutes, verrouillage
-  anti-force-brute, journal d'activité sans aucun secret.
-- **Session web par cookie `HttpOnly`** (D-013) — le transport par corps JSON
-  reste le défaut, la coque Tauri fonctionne sans changement.
-- **14 modules de calcul** portés des deux classeurs Excel, dont les 16 cas de
-  référence sont reproduits à 1e-6 près.
-- **Projets** avec isolation stricte entre clients, prouvée sur la vraie base.
-- **Rapports PDF** générés côté serveur, figés sur disque, téléchargeables.
-- **Dashboard administrateur** (port 5174) : création, suspension, réactivation,
-  réinitialisation de mot de passe, journal d'activité.
-- **Lien WhatsApp**, **affichage des versions**, **détection de mise à jour**.
-- **Site vitrine** (port 5175) : page unique, sans prix ni formulaire, un seul
-  appel à l'action — WhatsApp.
-
-Compte propriétaire : `otaziznoblees@gmail.com`.
-
-Les quatre interfaces, en développement :
-
-```bash
-cd backend && npm run dev   # 4000
-cd app     && npm run dev   # 5173
-cd admin   && npm run dev   # 5174
-cd site    && npm run dev   # 5175
-```
+**Tests : 118 au vert côté interfaces** (site 28, application 72, dashboard 18).
+**Backend : cassé**, voir tout en haut.
 
 ---
 
-## Vague 5 — ce qu'il reste à faire
+## Ce qui a été livré côté visuel (2026-08-11)
 
-D'après `CLAUDE.md` : revue de sécurité complète, tests d'isolation des données,
-tests d'authentification, tests des calculs métier.
-
-**Et surtout, la liste bloquante de D-011**, à ne pas rogner :
-
-1. **Réinitialiser le mot de passe de la base Supabase** — reporté par le
-   propriétaire tant qu'on est en prototype. La Vague 5 est le moment.
-2. **Regénérer `JWT_SECRET`.**
-3. Recalibrer `trust proxy` selon l'hébergeur retenu.
-4. Activer RLS sur `schema_migrations`.
-5. Remplacer le limiteur de débit en mémoire si l'API est répliquée un jour.
-6. Créer un projet Supabase séparé pour les tests.
-
-**Deux décisions attendent le propriétaire :**
-
-- **Où vont les PDF** en production : disque persistant ou Supabase Storage
-  (`docs/DEPLOIEMENT.md`). Ce sont des données irremplaçables, au même titre que
-  la base.
-- **Le nom de domaine.** Sans domaine à soi, la session web ne tiendra pas —
-  c'est la contrainte `SameSite` expliquée dans `docs/DEPLOIEMENT.md`.
+- **7 photographies** du propriétaire installées dans `site/public/photos/`,
+  renommées proprement. Registre unique dans `site/src/photos.ts`, avec les
+  textes alternatifs regroupés pour être relus d'un coup d'œil.
+- **Effet d'eau WebGL** (`site/src/components/PhotoOndulante.tsx`) sur le hero
+  du site. Adapté du composant fourni : plus de dépendance à Next.js, canevas
+  borné à son cadre, boucle arrêtée hors écran, **quatre replis** au lieu d'un
+  plantage.
+- **Image expansive au défilement** (`site/src/components/MediaExpansif.tsx`).
+  Adapté du composant fourni, avec **un changement assumé** : l'original
+  capturait la molette ; ici tout passe par `animation-timeline: view()`, donc
+  aucun détournement de défilement et aucun JavaScript pendant qu'on descend.
+- **Logiciel et dashboard** : la scène du produit sur les quatre écrans
+  d'avant-session (`BrandBackdrop`). Photo du canal côté client — la même que le
+  site vitrine, pour la continuité — et un asperseur côté administration, pour
+  qu'on ne confonde pas les deux. **Aucun WebGL ni détournement de molette dans
+  les outils de travail**, c'est délibéré.
+- **8 tests neufs** attrapent le défaut qu'aucun test classique ne voit : une
+  image cassée n'échoue nulle part, elle affiche un cadre vide.
+- `Image/` est passé en `.gitignore` : le dépôt ne redistribue pas d'aperçus
+  filigranés qui ne nous appartiennent pas.
 
 ---
 
-## À faire avant de considérer le produit présentable
+## Ce qu'il reste au produit, dans l'ordre conseillé
 
-- **Essayer les interfaces à la main**, écran par écran. Les tests couvrent le
-  comportement, pas l'ergonomie. Voir `docs/ANTIGRAVITY.md`, usage nº 1.
-- **Regarder le site vitrine à l'écran** en 375 px, 768 px et 1440 px : il n'a
-  jamais été affiché.
-- **Relire cinq formulations du site vitrine** (voir `docs/VAGUE-4.md`,
-  réserve nº 3) — elles sont de nous, pas du propriétaire.
-- **Regarder un vrai PDF** : sa mise en page mérite un jugement humain.
-- **Fournir une icône** (PNG carré 1024×1024).
-- **Renseigner le vrai nom** du compte propriétaire (« Propriétaire » pour
-  l'instant).
+1. **Réparer le backend** (tout en haut). Rien d'autre n'a de sens avant.
+2. **Renommer le compte propriétaire** en « Abdou Aziz Sy ».
+3. **Finir la mise en ligne.** Trois fichiers ont été commencés par une autre
+   session et ne sont **ni finis ni vérifiés** : `build.sh`, `render.yaml`,
+   `backend/tests/static.routes.test.ts`, plus le service statique dans
+   `backend/src/app.ts`. Topologie retenue : **une seule origine** (D-014),
+   l'API sous `/api/*`, le logiciel sous `/`, le dashboard sous `/admin/*`.
+4. **Mettre en place la sauvegarde.** La base et le bucket `rapports` sont
+   irremplaçables. Supabase sauvegarde la base selon l'offre souscrite ; **le
+   bucket, lui, est à vérifier explicitement**.
+5. **Brancher une supervision** gratuite sur `/health` (UptimeRobot ou
+   équivalent).
+6. **Vague 5 — sécurité**, avec la liste bloquante de D-011 : réinitialiser le
+   mot de passe de la base Supabase, regénérer `JWT_SECRET`, recalibrer
+   `trust proxy`, activer RLS sur `schema_migrations`, projet Supabase séparé
+   pour les tests.
+
+### Deux points ouverts, sans urgence
+
+- **Icône** 1024 × 1024 : nécessaire seulement si un installateur Windows
+  revient à l'ordre du jour. Sans objet pour une application web.
+- **Liste globale des rapports**, tous projets confondus : n'existe pas. Ce
+  serait une décision produit, pas un oubli.
 
 ---
 
@@ -99,28 +136,25 @@ tests d'authentification, tests des calculs métier.
 |---|---|
 | `CLAUDE.md` | Cahier des charges produit — fait foi |
 | `AGENTS.md` | Règles pour tout agent intervenant sur le dépôt |
-| `docs/DECISIONS.md` | 14 décisions d'architecture, dont **D-011** (durcissements reportés), **D-012** (ce qui est protégé) et **D-013** (cible web) |
-| `docs/API-VAGUE-1.md` à `API-VAGUE-4.md` | Contrats d'API, écrits avant chaque vague |
-| `docs/MOTEUR-GRAVITAIRE.md` / `MOTEUR-SOUS-PRESSION.md` | Spécification du moteur de calcul |
+| `GEMINI.md` | Prompt complet à donner à Antigravity, et ses quatre missions |
+| `docs/DECISIONS.md` | 15 décisions justifiées. **D-015 est annulée** par la décision du 2026-08-11 au soir |
+| `docs/API-VAGUE-1.md` à `API-VAGUE-4.md` | Contrats d'API |
+| `docs/MOTEUR-*.md` | Spécification du moteur et ses 16 cas de référence |
 | `docs/VAGUE-0.md` à `VAGUE-4.md` | Comptes rendus de livraison |
-| `docs/DEPLOIEMENT.md` | Topologie retenue et liste bloquante avant mise en ligne |
-| `docs/ANTIGRAVITY.md` | Comment répartir le travail avec Antigravity |
-| `docs/DEMARRAGE-SUPABASE.md` | Comment brancher la base |
+| `docs/DEPLOIEMENT.md` | Topologie et liste bloquante avant mise en ligne |
 
 ---
 
 ## Méthode qui a fait ses preuves
 
 1. Le lead écrit le **contrat d'API** de la vague **avant** de lancer les agents.
-   C'est ce qui leur permet de travailler en parallèle sans se contredire.
 2. Les agents travaillent sur des **périmètres de fichiers disjoints**.
-3. Une fois les tests simulés au vert, **on vérifie la vague contre la vraie
-   base** avec un script jetable. Cela a trouvé, à chaque vague, des défauts que
-   les simulations ne pouvaient pas voir.
+3. Une fois les tests simulés au vert, **on vérifie contre la vraie base** avec
+   un script jetable. Cela a trouvé des défauts à chaque vague.
 4. **Avant de mesurer, on repart d'un serveur neuf.** Un serveur de
    développement oublié sert du vieux code et fausse tout — c'est arrivé deux
    fois.
-5. **Deux agents en parallèle au maximum** : trois ont été coupés par des
-   limites d'usage, et deux l'ont été à quelques minutes de la fin. Un agent
-   coupé laisse un travail presque complet : relire son périmètre avant de
-   relancer quoi que ce soit.
+5. **Deux agents en parallèle au maximum.**
+6. **On relance les tests des trois interfaces après toute modification
+   partagée.** Le backend a été cassé sans que personne s'en aperçoive : c'est
+   exactement ce que cette habitude évite.

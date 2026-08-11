@@ -39,9 +39,10 @@ describe('adresse du serveur', () => {
     expect(() => resolveApiUrl('http://localhost:4000', false)).toThrow(ConfigurationError);
   });
 
-  it('refuse une adresse absente en production', () => {
-    expect(() => resolveApiUrl(undefined, false)).toThrow(ConfigurationError);
-    expect(() => resolveApiUrl('   ', false)).toThrow(ConfigurationError);
+  it('accepte une adresse absente ou relative en production (même origine)', () => {
+    expect(resolveApiUrl(undefined, false)).toBe('');
+    expect(resolveApiUrl('   ', false)).toBe('');
+    expect(resolveApiUrl('/api', false)).toBe('/api');
   });
 
   it('refuse une adresse illisible', () => {
