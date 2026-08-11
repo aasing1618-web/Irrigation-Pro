@@ -41,6 +41,29 @@ export function errorResponse(status: number, code: string, message: string): Re
   return jsonResponse({ error: { code, message } }, { status });
 }
 
+/**
+ * Réponse binaire — le PDF d'un rapport.
+ *
+ * Le client lit le corps par `blob()` et non par `json()` : il faut donc une
+ * réponse distincte, sans quoi un test de téléchargement vérifierait un chemin
+ * de code que l'application n'emprunte jamais.
+ */
+export function pdfResponse(contenu = 'PDF factice'): Response {
+  const blob = new Blob([contenu], { type: 'application/pdf' });
+  const headers = new Map<string, string>([
+    ['content-type', 'application/pdf'],
+    ['content-disposition', 'attachment; filename="Rapport.pdf"'],
+  ]);
+
+  return {
+    ok: true,
+    status: 200,
+    url: 'http://localhost:4000/api/reports/x/fichier',
+    headers: { get: (name: string) => headers.get(name.toLowerCase()) ?? null },
+    blob: () => Promise.resolve(blob),
+  } as unknown as Response;
+}
+
 /** Réponse type du serveur en bonne santé (contrat confirmé côté backend). */
 export const HEALTH_OK = {
   status: 'ok',

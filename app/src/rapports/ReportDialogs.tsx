@@ -72,14 +72,27 @@ export function GenerateReportDialog({
   const [notes, setNotes] = useState('');
   const envoiEnCours = useRef(false);
 
-  // Chaque ouverture repart de la sélection par défaut : sans cela, une
-  // préparation abandonnée laisserait ses cases cochées dans la suivante.
+  /**
+   * L'historique le plus récent, lu sans être observé.
+   *
+   * Il change d'identité à chaque rafraîchissement de la liste des calculs — y
+   * compris pendant que la fenêtre est ouverte. S'il figurait dans les
+   * dépendances de l'effet ci-dessous, une simple revalidation en arrière-plan
+   * effacerait les notes en cours de frappe et rétablirait la sélection par
+   * défaut sous les doigts de l'utilisateur.
+   */
+  const derniersCalculs = useRef(calculs);
+  derniersCalculs.current = calculs;
+
+  // Chaque ouverture — et elle seule — repart de la sélection par défaut : sans
+  // cela, une préparation abandonnée laisserait ses cases cochées dans la
+  // suivante.
   useEffect(() => {
     if (!open) return;
-    setSelection(derniersCalculsParModule(calculs));
+    setSelection(derniersCalculsParModule(derniersCalculs.current));
     setNotes('');
     envoiEnCours.current = false;
-  }, [open, calculs]);
+  }, [open]);
 
   const trop = selection.length > MAX_CALCULS_PAR_RAPPORT;
   const vide = selection.length === 0;

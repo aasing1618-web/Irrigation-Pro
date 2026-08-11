@@ -115,6 +115,7 @@ describe('création d’un projet', () => {
       [`GET /api/projects/${CREATED.id}`]: () =>
         jsonResponse({ projet: { ...CREATED, calculs: [] } }),
       [`GET /api/projects/${CREATED.id}/calculs`]: () => jsonResponse({ calculs: [] }),
+      [`GET /api/projects/${CREATED.id}/reports`]: () => jsonResponse({ rapports: [] }),
       'GET /api/calculs/modules': () => jsonResponse(FAKE_CATALOGUE),
     });
 
@@ -184,6 +185,10 @@ describe('fiche projet', () => {
       [`GET /api/projects/${PROJECT_NDIAYE.id}`]: () =>
         jsonResponse({ projet: { ...PROJECT_NDIAYE, calculs: [] } }),
       [`GET /api/projects/${PROJECT_NDIAYE.id}/calculs`]: () => jsonResponse({ calculs: [] }),
+      // La fiche projet porte aussi le panneau des rapports (Vague 3) : sans
+      // cette route, l'écran afficherait une erreur de liaison sans rapport
+      // avec ce que ces tests-ci vérifient.
+      [`GET /api/projects/${PROJECT_NDIAYE.id}/reports`]: () => jsonResponse({ rapports: [] }),
       'GET /api/calculs/modules': () => jsonResponse(FAKE_CATALOGUE),
       'GET /api/projects': () => listResponse([PROJECT_NDIAYE]),
       ...extra,

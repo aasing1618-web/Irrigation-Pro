@@ -31,6 +31,7 @@ import {
   ProjectsIcon,
   TrashIcon,
 } from '../components/icons';
+import { ReportsPanel } from '../rapports/ReportsPanel';
 import { useCalculModules, useDeleteCalcul, useProjectCalculs } from '../hooks/useCalculs';
 import { useDeleteProject, useProject, useUpdateProject } from '../hooks/useProjects';
 import { cn } from '../lib/cn';
@@ -181,6 +182,13 @@ export function ProjectDetail() {
               </ul>
             )}
           </Card>
+
+          <ReportsPanel
+            projectId={projectId}
+            nomProjet={data.nom}
+            calculs={calculs}
+            modules={modules.data ?? []}
+          />
         </div>
 
         <InfoCard project={data} />

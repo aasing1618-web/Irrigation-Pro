@@ -16,13 +16,14 @@ bord du propriétaire), `site/` (le site vitrine public).
 - **Elle impose le changement du mot de passe temporaire à la première
   connexion.**
 - **Elle bloque un compte suspendu et explique pourquoi.**
-- Elle présente la coque du logiciel : navigation, tableau de bord, paramètres
-  du compte, et les écrans à venir (Projets, Calculs, Rapports) annoncés par un
-  message « Disponible prochainement ».
+- **Elle gère les projets** : création, recherche, filtre par avancement, fiche
+  détaillée avec l'historique des calculs archivés.
+- **Elle donne accès aux modules de calcul d'irrigation**, dont les formulaires
+  sont construits à partir du catalogue servi par le serveur — ajouter un module
+  côté serveur suffit à le faire apparaître ici, sans toucher à l'application.
+- **Elle génère les rapports PDF** depuis la fiche d'un projet, et permet de les
+  télécharger et de les supprimer.
 - Elle affiche son numéro de version en bas de la barre de navigation.
-
-**Il n'y a pas encore de projets ni de calculs** (c'est la Vague 2). C'est normal
-et prévu.
 
 Tous les calculs d'irrigation sont réalisés **par le serveur**, jamais par
 l'application. C'est ce qui protège le savoir-faire du produit : même en
@@ -104,6 +105,28 @@ Windows et demande un greffon Rust, donc les deux outils listés plus bas
 seul fichier, `src/lib/secure-store.ts`, qui explique exactement les deux gestes
 à faire. **Aucun autre fichier de l'application ne changera** — ni les écrans,
 ni les tests.
+
+---
+
+## Générer un rapport PDF (Vague 3)
+
+Tout se passe **dans la fiche d'un projet**, panneau « Rapports ». On clique sur
+**Générer un rapport** : une fenêtre propose les calculs à reprendre — par
+défaut le dernier calcul de chaque module, c'est presque toujours le bon choix —
+et un champ de notes libres qui figureront dans le document. À la validation, le
+serveur compose le PDF, lui attribue une **référence** du type `RAP-2026-0042`
+(c'est ce numéro qui est imprimé sur le document remis au client final), et le
+rapport apparaît dans la liste, d'où il se télécharge ou se supprime.
+
+Deux refus sont annoncés **avant** le clic plutôt que subis après : tant qu'aucun
+calcul n'est archivé, le bouton reste inactif et explique pourquoi (un rapport
+sans résultat n'est pas défendable devant un client) ; et si le fichier d'un
+ancien rapport n'est plus sur le serveur, le téléchargement est grisé et le dit.
+
+**L'application ne fabrique aucun PDF.** Mise en page, page de garde,
+hypothèses, tableaux de résultats, avertissements du moteur, référence : tout
+vient du serveur. C'est la même règle que pour les calculs — ce qui fait la
+valeur du produit ne descend pas sur un poste Windows.
 
 ---
 
