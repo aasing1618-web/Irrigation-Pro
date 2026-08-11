@@ -15,6 +15,7 @@ import { Ouverture } from './sections/Ouverture';
 import { PourQui } from './sections/PourQui';
 import { Rapport } from './sections/Rapport';
 import { Remplace } from './sections/Remplace';
+import { Terrain } from './sections/Terrain';
 
 export function App() {
   return (
@@ -27,6 +28,7 @@ export function App() {
         <Ouverture />
         <Remplace />
         <PourQui />
+        <Terrain />
         <Modules />
         <Rapport />
         <Acces />

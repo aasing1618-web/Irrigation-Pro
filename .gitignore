@@ -44,3 +44,10 @@ Thumbs.db
 # Fichiers générés (rapports PDF locaux)
 backend/storage/
 tmp/
+
+# Photothèque de travail du propriétaire.
+# Réserve d'images d'où l'on tire les visuels du site ; ce n'est pas le produit.
+# Elle contient AUSSI des aperçus filigranés (Adobe Stock, Freepik) qui ne sont
+# pas licenciés : les publier dans le dépôt serait les redistribuer. Les visuels
+# réellement utilisés sont copiés, renommés et versionnés dans site/public/photos/.
+Image/
