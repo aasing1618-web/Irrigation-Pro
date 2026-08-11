@@ -31,6 +31,37 @@ export function BrandBackdrop({ children, width = 'md', className }: BrandBackdr
       data-surface="dark"
       className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-brand-950 px-6 py-10"
     >
+      {/* La scène du produit : pompage vers un canal en terre.
+          C'est la même image que l'ouverture du site vitrine, et ce n'est pas
+          un hasard — le client qui a découvert Irrigation Pro sur le web
+          retrouve exactement ce qu'il a vu au moment de se connecter.
+
+          Très voilée, pour deux raisons. D'abord parce que ces écrans sont des
+          écrans de travail : ce sont les champs de saisie qui doivent attirer
+          l'œil, pas le décor. Ensuite parce que le fichier fait 736 px de
+          large — nette et plein cadre, la photo serait floue sur un grand
+          écran. Voilée, sa douceur devient une texture. */}
+      <img
+        src="/photos/canal-pompage.jpg"
+        alt=""
+        aria-hidden="true"
+        width={736}
+        height={414}
+        decoding="async"
+        className="pointer-events-none absolute inset-0 size-full object-cover opacity-[0.13]"
+      />
+
+      {/* Voile de lisibilité : sans lui, le ciel clair de la photo passerait
+          sous le texte blanc et le contraste tomberait sous le seuil lisible. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(to bottom, var(--color-brand-950) 0%, transparent 40%, var(--color-brand-950) 100%)',
+        }}
+      />
+
       {/* Halo unique et sourd derrière la marque : donne de la profondeur à un
           fond plat sans devenir un dégradé décoratif. */}
       <div

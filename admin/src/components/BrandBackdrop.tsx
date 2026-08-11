@@ -33,6 +33,31 @@ export function BrandBackdrop({ children, width = 'md', className }: BrandBackdr
       data-surface="dark"
       className="relative flex min-h-full flex-col items-center justify-center overflow-hidden bg-brand-950 px-6 py-10"
     >
+      {/* Un asperseur au travail, très voilé.
+          Volontairement une autre image que celle de l'application cliente :
+          les deux interfaces partagent la même scène, mais le propriétaire doit
+          voir au premier coup d'œil qu'il n'est pas sur l'écran de ses clients.
+          C'est la mention « Administration » en pied qui le dit, et cette photo
+          qui le confirme sans avoir à lire. */}
+      <img
+        src="/photos/asperseur-rampe.jpg"
+        alt=""
+        aria-hidden="true"
+        width={736}
+        height={736}
+        decoding="async"
+        className="pointer-events-none absolute inset-0 size-full object-cover opacity-[0.11]"
+      />
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(to bottom, var(--color-brand-950) 0%, transparent 40%, var(--color-brand-950) 100%)',
+        }}
+      />
+
       <div
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-[38%] size-[42rem] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-70"
