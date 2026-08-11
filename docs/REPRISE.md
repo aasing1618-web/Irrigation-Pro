@@ -1,34 +1,6 @@
 # Où reprendre — état au 2026-08-11
 
-> **Mise à jour du 2026-08-11.** Le **backend de la Vague 3 est terminé** :
-> administration et rapports PDF sont écrits, relus et couverts — **498 tests
-> backend au vert**. Deux défauts réels ont été trouvés et corrigés à cette
-> occasion (un 404 dont la forme trahissait l'existence du routeur
-> d'administration ; un pied de page qui déclenchait un saut de page et faisait
-> produire 12 pages à un document de 4).
->
-> **Il reste les deux interfaces**, toutes deux interrompues par des limites
-> d'usage et **conservées en l'état, incomplètes** :
->
-> - **`admin/`** — ossature seulement (configuration, jetons de design,
->   composants de base, session, client HTTP). **`admin/src/routes/` est vide,
->   il n'y a ni `main.tsx` ni `App.tsx` : l'application n'est pas lançable.**
->   Tout reste à faire : les 5 écrans de la section 5 de `docs/API-VAGUE-3.md`
->   et les tests.
-> - **`app/`** — socle de la génération de rapports (`useReports.ts`,
->   `lib/reports.ts`, `lib/download.ts`, `rapports/ReportDialogs.tsx`).
->   Non branché dans la fiche projet, non testé.
->
-> Puis : **vérifier la Vague 3 contre la vraie base**, comme les vagues 1 et 2.
->
-> Le reste de ce document décrit l'état antérieur et reste globalement valable.
-
----
-
-# État au 2026-08-10
-
-Note de reprise, écrite au moment d'interrompre la session. À lire en premier
-avant de continuer le travail.
+Note de reprise, tenue à jour. À lire en premier avant de continuer le travail.
 
 ---
 
@@ -36,109 +8,86 @@ avant de continuer le travail.
 
 | Vague | État |
 |---|---|
-| 0 — Fondations | ✅ Livrée et vérifiée |
-| 1 — Connexion et comptes | ✅ Livrée, **vérifiée contre la vraie base Supabase** (16 contrôles) |
-| 2 — Projets et calculs | ✅ Livrée, **vérifiée contre la vraie base** (21 contrôles) |
-| 3 — Rapports PDF et dashboard admin | 🚧 **En cours — c'est ici qu'on reprend** |
-| 4 — Finitions | ⬜ Non commencée |
+| 0 — Fondations | ✅ Livrée |
+| 1 — Connexion et comptes | ✅ Livrée, **vérifiée sur la vraie base** (16 contrôles) |
+| 2 — Projets et calculs | ✅ Livrée, **vérifiée sur la vraie base** (21 contrôles) |
+| 3 — Rapports PDF et dashboard admin | ✅ Livrée, **vérifiée sur la vraie base** (24 contrôles) |
+| 4 — Finitions | 🚧 **C'est ici qu'on reprend** |
 | 5 — Sécurité et tests finaux | ⬜ Non commencée |
 
-**397 tests au vert** : 351 backend, 46 application. Tout compile.
-Le dépôt est à jour sur `github.com/aasing1618-web/Irrigation-Pro`, branche `main`.
+**570 tests au vert** : 498 backend, 54 application cliente, 18 dashboard.
+Dépôt à jour sur `github.com/aasing1618-web/Irrigation-Pro`, branche `main`.
 
 ---
 
-## Ce qui est déjà en place et fonctionne
+## Ce qui fonctionne aujourd'hui
 
-- Base **Supabase** branchée (`aws-1-eu-west-1`, via le *pooler*, port 6543).
-  Les 3 migrations sont appliquées. Le verrouillage RLS est actif et vérifié :
-  les rôles publics de Supabase n'ont plus aucun droit sur nos tables.
-- Authentification complète, suspension effective en moins de 15 minutes.
-- **14 modules de calcul**, dont les 16 cas de référence des classeurs Excel
-  sont reproduits à 1e-6 près.
-- CRUD projets avec isolation stricte entre clients, prouvée sur la vraie base.
-- Compte propriétaire créé : `otaziznoblees@gmail.com`.
+- Base **Supabase** branchée (pooler IPv4, TLS vérifié par le certificat racine
+  de Supabase versionné dans le dépôt). Trois migrations appliquées, verrouillage
+  RLS actif : l'API REST publique de Supabase ne peut rien lire.
+- **Authentification** complète : mot de passe temporaire à changer, statut
+  ACTIF/SUSPENDU, suspension effective en moins de 15 minutes, verrouillage
+  anti-force-brute, journal d'activité sans aucun secret.
+- **14 modules de calcul** portés des deux classeurs Excel, dont les 16 cas de
+  référence sont reproduits à 1e-6 près.
+- **Projets** avec isolation stricte entre clients, prouvée sur la vraie base.
+- **Rapports PDF** générés côté serveur, figés sur disque, téléchargeables.
+- **Dashboard administrateur** (port 5174) : création, suspension, réactivation,
+  réinitialisation de mot de passe, journal d'activité.
 
----
-
-## Vague 3 — travail partiel conservé
-
-Deux agents ont été interrompus **en cours de travail**. Ce qu'ils ont produit
-compile et ne casse aucun test, mais **n'est pas terminé et n'est pas testé**.
-
-### Rapports PDF — `backend/src/reports/`
-
-Fichiers présents : `types.ts`, `collecte.ts`, `mise-en-page.ts`,
-`document.ts`, `texte.ts`.
-
-**Ce qui manque :**
-- `backend/src/api/reports.routes.ts` — les 4 routes du contrat
-- `backend/src/db/repositories/reports.repo.ts`
-- le montage de la route dans `backend/src/api/index.ts`
-- **tous les tests** (`backend/tests/reports.*.test.ts`)
-- la décision « régénérer à la demande » vs « écrire sur disque » — non tranchée
-- la vérification du rendu des accents par les polices de `pdfkit`
-
-### Administration — `backend/src/api/admin.routes.ts`
-
-754 lignes, apparemment complet, plus `admin-actions.repo.ts` (177 lignes) et
-des ajouts dans `users.repo.ts`. La route semble montée dans `api/index.ts`.
-
-**Ce qui manque :**
-- **tous les tests** (`backend/tests/admin.*.test.ts`)
-- **une relecture attentive** : ce code n'a jamais été relu ni exercé. Ne pas le
-  considérer comme acquis. Vérifier en particulier les points exigés par le
-  contrat : `password_hash` qui ne sort jamais, `404` et non `403` pour un
-  compte `CLIENT`, mot de passe temporaire absent de tout journal, révocation
-  des sessions à la suspension, et les garde-fous d'auto-verrouillage.
-
-### Dashboard administrateur — `admin/`
-
-**Pas commencé.** Le dossier est vide. Le contrat le décrit en section 5 de
-`docs/API-VAGUE-3.md`.
-
-### Interface cliente — génération de rapports
-
-**Pas commencée.** L'application ne sait pas encore demander ni télécharger un
-PDF. À faire une fois les routes de rapports en place.
+Compte propriétaire : `otaziznoblees@gmail.com`.
 
 ---
 
-## Par quoi reprendre, dans l'ordre
+## Vague 4 — ce qu'il reste à faire
 
-1. **Tester et relire l'API d'administration** — le code existe, il n'est pas
-   éprouvé. C'est le plus proche d'être fini.
-2. **Terminer les rapports PDF** : dépôt, routes, montage, tests, et un vrai PDF
-   ouvert et regardé.
-3. **Construire le dashboard administrateur** (`admin/`).
-4. **Ajouter la génération de rapports à l'application cliente.**
-5. **Vérifier la Vague 3 contre la vraie base**, comme les vagues 1 et 2 :
-   création d'un compte par l'administrateur, suspension, génération d'un PDF,
-   et contrôle qu'un client ne peut pas télécharger le rapport d'un autre.
+D'après `CLAUDE.md` :
+
+1. **Bouton WhatsApp** dans l'application cliente — lien `wa.me/221778608247`
+   avec message pré-rempli portant le nom du client. **Pas d'API WhatsApp.**
+   L'emplacement est déjà prévu dans le dashboard, côté création de compte.
+2. **Affichage de la version** — déjà fait dans les deux interfaces, à vérifier.
+3. **Détection d'une nouvelle version disponible**, notification discrète.
+4. **Site vitrine public** (`site/`, dossier vide) : présentation du produit et
+   bouton WhatsApp. **Ce n'est pas une boutique** — ni panier, ni prix affiché.
+5. **La décision reportée : application installée ou web ?** Tout le code
+   fonctionne dans les deux cas. Seul le rangement sécurisé du jeton de session
+   est spécifique au bureau, et demande la chaîne Rust.
 
 ---
 
-## Documents à lire avant de reprendre
+## À faire avant de considérer le produit présentable
+
+- **Essayer les interfaces à la main**, écran par écran. Les tests couvrent le
+  comportement, pas l'ergonomie ni le confort d'usage.
+- **Regarder un vrai PDF** : sa mise en page mérite un jugement humain avant
+  d'être remise à un client final.
+- **Fournir une icône** (PNG carré 1024×1024).
+- **Renseigner le vrai nom** du compte propriétaire (« Propriétaire » pour
+  l'instant).
+
+---
+
+## Documents de référence
 
 | Document | Rôle |
 |---|---|
 | `CLAUDE.md` | Cahier des charges produit — fait foi |
-| `docs/DECISIONS.md` | 12 décisions d'architecture justifiées, dont **D-011** (durcissements reportés) |
-| `docs/API-VAGUE-3.md` | **Le contrat de la vague en cours** |
+| `docs/DECISIONS.md` | 13 décisions d'architecture justifiées, dont **D-011** (durcissements reportés) et **D-012** (ce qui est protégé) |
+| `docs/API-VAGUE-1.md` à `API-VAGUE-3.md` | Contrats d'API, écrits avant chaque vague |
 | `docs/MOTEUR-GRAVITAIRE.md` / `MOTEUR-SOUS-PRESSION.md` | Spécification du moteur de calcul |
-| `docs/VAGUE-0.md` à `VAGUE-2.md` | Comptes rendus des vagues livrées |
+| `docs/VAGUE-0.md` à `VAGUE-3.md` | Comptes rendus de livraison |
 | `docs/DEMARRAGE-SUPABASE.md` | Comment brancher la base |
 
 ---
 
-## Points ouverts avec le propriétaire
+## Méthode qui a fait ses preuves
 
-- **Le nom du compte propriétaire** est « Propriétaire » ; le vrai nom reste à
-  renseigner.
-- **L'icône de l'application** (PNG carré 1024×1024) n'a pas encore été fournie.
-- **Rust + Visual Studio Build Tools** ne sont pas installés : nécessaires
-  seulement pour produire le `.exe` Windows et pour que la session survive à la
-  fermeture du logiciel. Le choix « application installée ou web » est
-  volontairement repoussé à la Vague 4.
-- **D-011** : les durcissements de sécurité reportés, à reprendre en Vague 5 —
-  notamment la réinitialisation du mot de passe de la base Supabase.
+1. Le lead écrit le **contrat d'API** de la vague **avant** de lancer les agents.
+   C'est ce qui leur permet de travailler en parallèle sans se contredire.
+2. Les agents travaillent sur des **périmètres de fichiers disjoints**.
+3. Une fois les tests simulés au vert, **on vérifie la vague contre la vraie
+   base** avec un script jetable. Cela a trouvé, à chaque vague, des défauts que
+   les simulations ne pouvaient pas voir.
+4. **Deux agents en parallèle au maximum** : trois ont été coupés deux fois par
+   des limites d'usage.

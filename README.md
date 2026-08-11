@@ -78,7 +78,7 @@ précédente est validée.
 - [x] **Vague 0 — Fondations** : structure du repo, modèle de données, serveur et application connectés
 - [x] **Vague 1 — Connexion et comptes** : authentification, statut ACTIF/SUSPENDU
 - [x] **Vague 2 — Projets et calculs** : CRUD projets, besoins en eau (FAO), Manning-Strickler
-- [ ] **Vague 3 — Rapports PDF et dashboard admin**
+- [x] **Vague 3 — Rapports PDF et dashboard admin**
 - [ ] **Vague 4 — Finitions** : WhatsApp, version, site vitrine
 - [ ] **Vague 5 — Sécurité et tests finaux**
 
