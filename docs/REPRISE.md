@@ -1,4 +1,31 @@
-# Où reprendre — état au 2026-08-10
+# Où reprendre — état au 2026-08-11
+
+> **Mise à jour du 2026-08-11.** Le **backend de la Vague 3 est terminé** :
+> administration et rapports PDF sont écrits, relus et couverts — **498 tests
+> backend au vert**. Deux défauts réels ont été trouvés et corrigés à cette
+> occasion (un 404 dont la forme trahissait l'existence du routeur
+> d'administration ; un pied de page qui déclenchait un saut de page et faisait
+> produire 12 pages à un document de 4).
+>
+> **Il reste les deux interfaces**, toutes deux interrompues par des limites
+> d'usage et **conservées en l'état, incomplètes** :
+>
+> - **`admin/`** — ossature seulement (configuration, jetons de design,
+>   composants de base, session, client HTTP). **`admin/src/routes/` est vide,
+>   il n'y a ni `main.tsx` ni `App.tsx` : l'application n'est pas lançable.**
+>   Tout reste à faire : les 5 écrans de la section 5 de `docs/API-VAGUE-3.md`
+>   et les tests.
+> - **`app/`** — socle de la génération de rapports (`useReports.ts`,
+>   `lib/reports.ts`, `lib/download.ts`, `rapports/ReportDialogs.tsx`).
+>   Non branché dans la fiche projet, non testé.
+>
+> Puis : **vérifier la Vague 3 contre la vraie base**, comme les vagues 1 et 2.
+>
+> Le reste de ce document décrit l'état antérieur et reste globalement valable.
+
+---
+
+# État au 2026-08-10
 
 Note de reprise, écrite au moment d'interrompre la session. À lire en premier
 avant de continuer le travail.
