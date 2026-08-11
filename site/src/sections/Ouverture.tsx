@@ -12,6 +12,7 @@
  */
 
 import { LienWhatsApp } from '../components/LienWhatsApp';
+import { PhotoOndulante } from '../components/PhotoOndulante';
 import { Contenu } from '../components/Section';
 import { ETAPES_DU_PIPELINE, NOMBRE_DE_MODULES } from '../contenu';
 import { CANAL_POMPAGE } from '../photos';
@@ -29,17 +30,9 @@ export function Ouverture() {
           Ensuite parce que le fichier fait 736 px de large : nette et en pleine
           taille, elle serait floue sur un grand écran. Voilée, sa douceur
           devient une texture. */}
-      <img
-        src={CANAL_POMPAGE.src}
-        alt=""
-        aria-hidden="true"
-        width={CANAL_POMPAGE.width}
-        height={CANAL_POMPAGE.height}
-        // Le hero est la plus grande image de la page : c'est elle qui décide
-        // du délai d'affichage perçu. On la charge donc en priorité.
-        fetchPriority="high"
-        decoding="async"
-        className="pointer-events-none absolute inset-0 size-full object-cover opacity-[0.18]"
+      <PhotoOndulante
+        photo={CANAL_POMPAGE}
+        className="pointer-events-none absolute inset-0 opacity-[0.34]"
       />
 
       {/* Voile de lisibilité. Sans lui, le texte blanc passerait sur le ciel

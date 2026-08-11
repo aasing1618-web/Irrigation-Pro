@@ -8,6 +8,7 @@
 
 import { LienWhatsApp } from '../components/LienWhatsApp';
 import { Contenu } from '../components/Section';
+import { ASPERSION_PARCELLE } from '../photos';
 
 export function AppelFinal() {
   return (
@@ -16,6 +17,28 @@ export function AppelFinal() {
       data-surface="dark"
       className="relative overflow-hidden bg-brand-950 py-20 sm:py-24"
     >
+      {/* La page se ferme sur une parcelle en train d'être arrosée : le
+          résultat du travail, juste au-dessus du bouton qui l'engage. Très
+          voilée, comme à l'ouverture — c'est le texte qui doit rester lu. */}
+      <img
+        src={ASPERSION_PARCELLE.src}
+        alt=""
+        aria-hidden="true"
+        width={ASPERSION_PARCELLE.width}
+        height={ASPERSION_PARCELLE.height}
+        loading="lazy"
+        decoding="async"
+        className="pointer-events-none absolute inset-0 size-full object-cover opacity-[0.16]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            'linear-gradient(to right, var(--color-brand-950) 30%, transparent 100%)',
+        }}
+      />
+
       <div
         aria-hidden="true"
         className="pointer-events-none absolute left-1/2 top-1/2 size-[42rem] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-70"

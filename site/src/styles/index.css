@@ -287,3 +287,92 @@
     }
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   L'image qui s'ouvre au défilement (voir components/MediaExpansif.tsx)
+
+   Tout est piloté par `animation-timeline: view()` : la progression vient de la
+   position de la section dans le viewport, jamais d'un écouteur de défilement.
+   Rien ne s'exécute en JavaScript pendant qu'on descend la page.
+
+   Règle de conception : **l'état au repos est l'état final.** Un navigateur qui
+   ne connaît pas encore les animations liées au défilement affiche donc l'image
+   grande ouverte, ce qui est une page correcte et non une page cassée. Le repli
+   est gratuit : ni détection, ni code supplémentaire.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.expansif-cadre {
+  width: min(100% - 3rem, 64rem);
+  aspect-ratio: 3 / 4;
+  max-height: 80vh;
+  /* Le cadre grandit depuis son bord bas : l'image semble monter vers le titre
+     au lieu de gonfler dans le vide. */
+  transform-origin: 50% 100%;
+}
+
+@media (min-width: 640px) {
+  .expansif-cadre {
+    aspect-ratio: 16 / 9;
+  }
+}
+
+/* On n'anime que `transform` et `opacity` : ce sont les deux seules propriétés
+   que le navigateur sait traiter sans refaire la mise en page à chaque image.
+   Animer `width` ici ferait recalculer toute la section soixante fois par
+   seconde. */
+@keyframes expansif-ouverture {
+  from {
+    transform: scale(0.46);
+    opacity: 0.55;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes expansif-vers-gauche {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-7vw);
+  }
+}
+
+@keyframes expansif-vers-droite {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(7vw);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .expansif-cadre,
+    .expansif-mot-gauche,
+    .expansif-mot-droite {
+      animation-timing-function: linear;
+      animation-fill-mode: both;
+      animation-timeline: view();
+      /* L'ouverture se joue entre l'entrée de la section et le moment où elle
+         occupe la moitié du viewport. Au-delà, l'image est ouverte et on lit
+         le texte qui suit. */
+      animation-range: entry 8% cover 42%;
+    }
+
+    .expansif-cadre {
+      animation-name: expansif-ouverture;
+    }
+
+    .expansif-mot-gauche {
+      animation-name: expansif-vers-gauche;
+    }
+
+    .expansif-mot-droite {
+      animation-name: expansif-vers-droite;
+    }
+  }
+}
