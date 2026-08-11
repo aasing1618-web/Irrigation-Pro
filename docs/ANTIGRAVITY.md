@@ -17,7 +17,7 @@ chaque compte rendu :
 
 C'est exactement le trou qu'Antigravity comble. Il **pilote un vrai navigateur** :
 il clique, remplit, navigue, prend des captures et enregistre ce qu'il fait.
-Là où 570 tests prouvent qu'une fonction renvoie la bonne valeur, Antigravity
+Là où 646 tests prouvent qu'une fonction renvoie la bonne valeur, Antigravity
 peut dire *« le bouton est illisible sur fond sombre »* ou *« l'écran saute
 pendant une seconde au chargement »*.
 
@@ -121,10 +121,12 @@ lire un journal de build qui échoue.
 > avec repli sur `index.html`, le script de build, la vérification que
 > `/health` répond.
 >
-> **Attention au point critique du document** : le cookie de session est
-> `SameSite=Strict`. Si l'interface et l'API ne partagent pas le même domaine,
-> le client ne restera jamais connecté. Vérifie-le explicitement avant de
-> déclarer que ça marche.
+> **Attention au point critique du document** : il n'y a **pas de nom de
+> domaine** (D-014). C'est pour cela qu'un seul processus Node sert l'API, le
+> logiciel et le dashboard — une seule origine, donc le cookie de session
+> `SameSite=Strict` fonctionne. Si tu sépares l'interface de l'API, le client
+> ne restera jamais connecté. Vérifie-le explicitement avant de déclarer que
+> ça marche.
 >
 > Les variables d'environnement de production, c'est moi qui les pose. Ne me
 > demande aucun secret et n'en écris aucun dans le dépôt.
@@ -153,7 +155,7 @@ il n'a pas les mêmes angles morts.
 ```
 1. Antigravity regarde        → produit une liste de défauts, avec captures
 2. Tu tries la liste          → « ça oui, ça non, ça plus tard »
-3. Claude Code corrige        → il connaît les contrats et les 570 tests
+3. Claude Code corrige        → il connaît les contrats et les 646 tests
 4. Antigravity revérifie      → il rouvre les mêmes écrans et compare
 ```
 
@@ -202,3 +204,16 @@ npm test                    # dans chaque dossier touché
 
 C'est cette discipline qui a trouvé, à chaque vague de ce projet, des défauts
 que les tests simulés ne pouvaient pas voir.
+
+---
+
+## 7. Le prompt tout prêt
+
+`GEMINI.md`, à la racine du dépôt, est le **prompt complet** à donner à
+Antigravity au début d'une session : qui il est, l'état exact du produit, les
+règles qui ne se négocient pas, ce qu'il ne doit pas toucher, et ses quatre
+missions dans l'ordre.
+
+Il suffit de lui dire :
+
+> « Lis `GEMINI.md` et exécute la mission nº 1. »

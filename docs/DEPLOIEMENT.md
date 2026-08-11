@@ -1,110 +1,139 @@
 # Déploiement — Irrigation Pro
 
-Document de préparation. **Rien n'est déployé à ce jour** : ce fichier décrit la
+Document de préparation. **Rien n'est déployé à ce jour.** Il décrit la
 topologie retenue, les contraintes qui la rendent obligatoire, et ce qu'il reste
-à faire. Il sera exécuté en Vague 5.
+à faire.
+
+Deux décisions du propriétaire, prises le **2026-08-11**, commandent tout ce
+document :
+
+1. **Pas de nom de domaine pour l'instant.** On se débrouille avec les
+   sous-domaines gratuits des hébergeurs.
+2. **Les PDF vont sur un disque persistant.**
 
 ---
 
 ## Ce qu'il faut héberger
 
-| Composant | Nature | Contrainte particulière |
+| Composant | Nature | Contrainte |
 |---|---|---|
-| `backend/` | Processus Node en continu | **Écrit des fichiers sur disque** (`backend/storage/`, les PDF figés) et tient son limiteur de débit en mémoire → **une seule instance, avec un disque qui persiste** |
-| Base PostgreSQL | Déjà hébergée chez **Supabase** | Rien à faire |
-| `app/` | Fichiers statiques (build Vite) | Doit partager le domaine de l'API — voir plus bas |
-| `admin/` | Fichiers statiques | Accès propriétaire uniquement |
-| `site/` | Fichiers statiques | Public, aucun secret, aucun cookie |
+| `backend/` | Processus Node en continu | **Écrit des fichiers sur disque** et tient son limiteur de débit en mémoire → une seule instance, avec un disque qui persiste |
+| Base PostgreSQL | Déjà chez **Supabase** | Rien à faire |
+| `app/` | Fichiers statiques | Doit partager l'origine de l'API — voir plus bas |
+| `admin/` | Fichiers statiques | Idem : il s'authentifie par le même cookie |
+| `site/` | Fichiers statiques | Public, aucun cookie, aucun secret → **libre d'aller n'importe où** |
 
 ---
 
-## La contrainte qui commande tout le reste
+## Le problème que « pas de domaine » aurait posé
 
-Depuis D-013, la session du client repose sur un cookie `SameSite=Strict`. Or
-`SameSite` raisonne en **domaine enregistrable**, pas en origine :
+Depuis D-013, la session repose sur un cookie `SameSite=Strict`. `SameSite`
+raisonne en **domaine enregistrable** :
 
-- ✅ `app.irrigation-pro.com` + `api.irrigation-pro.com` → même site, le cookie circule
-- ❌ `irrigation-pro.vercel.app` + `irrigation-pro.onrender.com` → **sites différents : le client ne restera jamais connecté**
+- ❌ `irrigation-pro.vercel.app` + `irrigation-pro.onrender.com` → deux sites
+  différents. Le cookie ne partira **jamais**, et le client ne restera jamais
+  connecté.
 
-C'est le piège classique de l'hébergement gratuit, et il ne se voit qu'une fois
-en production. Deux issues propres, une seule mauvaise :
+Sans domaine à soi, on ne peut donc **pas** répartir l'interface et l'API sur
+deux hébergeurs. Passer à `SameSite=None` rouvrirait la CSRF : refusé.
 
-| Issue | Verdict |
-|---|---|
-| Un nom de domaine à soi, deux sous-domaines | ✅ correct |
-| **Une seule origine** qui sert à la fois l'interface et l'API | ✅ **le plus simple, retenu** |
-| `SameSite=None` | ❌ refusé : rouvre la faille CSRF que `Strict` ferme |
+## Le contournement : ne déployer qu'**une seule chose**
 
----
-
-## Topologie retenue — une seule origine
+> **Un seul processus Node sert l'API *et* les interfaces.**
+> Il n'y a plus qu'une origine, donc plus de problème de cookie du tout —
+> et plus de CORS non plus.
 
 ```
-                    https://app.irrigation-pro.com
-                                │
-                    ┌───────────▼────────────┐
-                    │   un seul processus     │
-                    │   Node (Express 5)      │
-                    ├─────────────────────────┤
-                    │  /api/*  → l'API        │
-                    │  /*      → app/dist     │
-                    └───────────┬─────────────┘
-                                │
-              ┌─────────────────┼──────────────────┐
-              ▼                 ▼                  ▼
-      disque persistant   Supabase (base)    (rien d'autre)
-      backend/storage/
+        https://irrigation-pro.onrender.com          (sous-domaine gratuit)
+                          │
+        ┌─────────────────▼──────────────────┐
+        │   un seul processus Node/Express    │
+        ├─────────────────────────────────────┤
+        │  /api/*    → l'API                  │
+        │  /admin/*  → admin/dist  (dashboard)│
+        │  /*        → app/dist    (logiciel) │
+        └─────────────────┬───────────────────┘
+                          │
+         ┌────────────────┼─────────────────┐
+         ▼                ▼                 ▼
+  disque persistant   Supabase        (rien d'autre)
+  les PDF            la base
 ```
 
-Le dashboard `admin/` va sur `admin.irrigation-pro.com`, le site vitrine
-`site/` sur `irrigation-pro.com` (hébergement statique gratuit, il n'a ni
-cookie ni secret).
+Le **site vitrine** reste à part, sur n'importe quel hébergement statique
+gratuit (Vercel, Netlify, Cloudflare Pages) : il n'a ni cookie, ni secret, ni
+appel réseau. Il pointe simplement vers l'adresse ci-dessus.
 
-**Pourquoi cette forme :** l'interface et l'API partagent la même origine. Le
-cookie fonctionne sans discussion, **CORS disparaît entièrement**, il n'y a
-qu'un certificat TLS, qu'un déploiement, qu'une facture. Pour un produit à
-quelques dizaines de clients, tout le reste est de la complexité gratuite.
+**Ce n'est pas un pis-aller.** C'est la topologie la plus simple : un
+déploiement, un certificat TLS, une facture, aucune configuration CORS. Le jour
+où vous prendrez un domaine, il suffira de le brancher sur ce même service.
 
-**Ce que cela demande au code, et qui n'est pas encore fait :** Express doit
-servir `app/dist` en statique avec un repli sur `index.html` pour les routes du
-navigateur. C'est une vingtaine de lignes, à écrire en Vague 5.
+### Ce que cela demande au code — la seule chose qui manque
+
+Express doit servir `app/dist` et `admin/dist` en statique, avec repli sur
+`index.html` pour les routes du navigateur, et l'interface doit viser sa
+**propre origine** au lieu d'une adresse absolue. C'est le dernier morceau
+manquant. Tout le reste est prêt.
+
+### ⚠️ Une conséquence à connaître
+
+Le logiciel client et le dashboard partagent alors la même origine, donc **le
+même cookie de session**. Se connecter comme administrateur dans le même
+navigateur remplace la session client ouverte. Ce n'est pas un défaut — c'est le
+comportement de n'importe quel site — mais il faut le savoir : pour travailler
+sur les deux à la fois, utilisez une fenêtre de navigation privée.
+
+### Alternative, si vous voulez garder l'interface chez Vercel
+
+Vercel sait **relayer** `/api/*` vers un autre serveur (`rewrites` dans
+`vercel.json`). Le navigateur ne voit alors qu'une seule origine, et le cookie
+fonctionne aussi.
+
+C'est valable, mais cela ajoute un intermédiaire sur **chaque** requête, y
+compris le téléchargement des PDF. À réserver au cas où vous tiendriez à
+héberger l'interface chez Vercel. Sinon, la topologie ci-dessus est plus simple.
 
 ---
 
-## Le point à trancher : où vont les PDF
+## Les PDF — décidé : disque persistant
 
-Les rapports sont **figés sur disque** et non régénérés (Vague 3) : une
-référence déjà imprimée ne doit jamais désigner un document différent. Donc
-`backend/storage/` contient des données irremplaçables, au même titre que la
-base.
+Les rapports sont **figés sur disque** et non régénérés : une référence déjà
+imprimée ne doit jamais désigner un document différent. `backend/storage/`
+contient donc des données **irremplaçables**, au même titre que la base.
 
-| Option | Pour | Contre |
+**Décision du propriétaire : disque persistant.** Aucune ligne de code à changer.
+
+Trois conséquences à ne pas oublier :
+
+1. **Un hébergement « sans serveur » est exclu** (Vercel Functions, Netlify
+   Functions, Cloudflare Workers) : pas de disque, et le limiteur de débit en
+   mémoire cesse de fonctionner dès qu'il y a plusieurs instances.
+2. **Le disque doit être monté sur le chemin de `backend/storage/`**, et ce
+   chemin doit être configurable par variable d'environnement.
+3. **Il faut le sauvegarder.** Un disque persistant n'est pas une sauvegarde :
+   il persiste, mais il ne se restaure pas tout seul. Prévoir une copie
+   régulière, au même rythme que celle de la base.
+
+Le jour où le volume de clients rendra la perte douloureuse, Supabase Storage
+sera la suite logique — mais ce n'est pas aujourd'hui.
+
+---
+
+## Hébergeurs compatibles, sans domaine
+
+Ce qu'il faut : un processus Node en continu, un disque qui persiste, un
+sous-domaine gratuit, TLS automatique.
+
+| Hébergeur | Sous-domaine | Remarque |
 |---|---|---|
-| **Disque persistant** de l'hébergeur | Zéro ligne de code à changer | Interdit tout hébergement « sans serveur » ; il faut penser à le sauvegarder |
-| **Supabase Storage** (déjà dans le contrat) | Sauvegardé avec le reste, survit à la destruction du serveur | Demande de réécrire la couche de stockage des rapports |
+| **Render** | `*.onrender.com` | Le plus simple à tenir. Le disque persistant demande l'offre payante (~7 $/mois) : **l'offre gratuite met le service en veille et n'a pas de disque** |
+| **Fly.io** | `*.fly.dev` | Volumes persistants, un peu plus technique |
+| **Railway** | `*.up.railway.app` | Volumes, facturation à l'usage |
 
-**Recommandation :** disque persistant pour le lancement, Supabase Storage le
-jour où il y a assez de clients pour que la perte fasse mal. **Décision du
-propriétaire attendue.**
-
-⚠️ Un hébergement « serverless » (Vercel Functions, Netlify Functions, Cloudflare
-Workers) est **incompatible en l'état** : pas de disque, et le limiteur de débit
-en mémoire ne fonctionne plus dès qu'il y a plusieurs instances.
-
----
-
-## Hébergeurs compatibles
-
-Ce dont on a besoin : un processus Node qui tourne en continu, un disque qui
-persiste, un domaine à soi, TLS automatique.
-
-- **Render**, plan payant + disque persistant — le plus simple à tenir pour
-  quelqu'un qui ne veut pas administrer un serveur.
-- **Fly.io** ou **Railway** — volumes persistants, même principe.
-- **Un petit VPS** (Hetzner, OVH, Contabo) avec **Caddy** — le moins cher et le
-  plus contrôlable, mais c'est une machine à entretenir.
-
-Comptez de l'ordre de 5 à 10 € par mois. Supabase reste sur son offre actuelle.
+L'offre gratuite de Render **ne convient pas** : sans disque, les rapports déjà
+générés disparaîtraient au prochain redémarrage. Un rapport qui s'évapore après
+avoir été remis à un client, c'est le genre d'incident qui coûte plus cher que
+l'abonnement.
 
 ---
 
@@ -114,20 +143,15 @@ Comptez de l'ordre de 5 à 10 € par mois. Supabase reste sur son offre actuell
 
 ```
 NODE_ENV=production
-DATABASE_URL=          # pooler Supabase, port 6543
-DATABASE_SSL_CA=       # ou le certificat versionné dans backend/certs/
-JWT_SECRET=            # REGÉNÉRÉ (D-011), jamais celui du prototype
-CORS_ORIGINS=          # inutile en origine unique ; sinon la liste stricte
+DATABASE_URL=            # pooler Supabase, port 6543
+JWT_SECRET=              # REGÉNÉRÉ (D-011), jamais celui du prototype
 PORT=
-TRUST_PROXY=           # à recalibrer selon l'hébergeur (D-011)
+TRUST_PROXY=             # à recalibrer selon l'hébergeur (D-011)
+STORAGE_DIR=             # chemin du disque persistant monté
+CORS_ORIGINS=            # inutile en origine unique ; à laisser vide
 ```
 
-Côté interfaces, à la compilation :
-
-```
-VITE_API_URL=https://app.irrigation-pro.com   # même origine
-VITE_WHATSAPP_NUMBER=221778608247
-```
+Le site vitrine, à la compilation : `VITE_WHATSAPP_NUMBER=221778608247`.
 
 ---
 
@@ -135,13 +159,15 @@ VITE_WHATSAPP_NUMBER=221778608247
 
 Reprise de **D-011**, à ne pas rogner :
 
-- [ ] **Réinitialiser le mot de passe de la base Supabase** — le mot de passe actuel a transité en clair dans une sortie de terminal
+- [ ] **Réinitialiser le mot de passe de la base Supabase** — l'actuel a transité en clair dans une sortie de terminal
 - [ ] **Regénérer `JWT_SECRET`** — tout secret ayant existé en prototype est brûlé
-- [ ] Recalibrer `trust proxy` selon l'hébergeur retenu, sinon le limiteur de débit voit la même adresse IP pour tout le monde
+- [ ] Écrire le service statique dans Express (le morceau manquant ci-dessus)
+- [ ] Recalibrer `trust proxy`, sinon le limiteur de débit voit la même adresse IP pour tout le monde
+- [ ] Rendre le chemin de `backend/storage/` configurable et le pointer sur le disque monté
 - [ ] Activer RLS sur `schema_migrations`
-- [ ] Mettre en place la **sauvegarde de `backend/storage/`** en même temps que celle de la base
-- [ ] Vérifier que `/health` répond et brancher une supervision gratuite (UptimeRobot ou équivalent)
-- [ ] Essayer la chaîne complète **sur le domaine réel**, dans un navigateur : connexion, F5, fermeture de l'onglet, retour le lendemain
+- [ ] Mettre en place la **sauvegarde du disque** en même temps que celle de la base
+- [ ] Brancher une supervision gratuite sur `/health` (UptimeRobot ou équivalent)
+- [ ] **Essayer la chaîne complète dans un navigateur** : connexion, F5, fermeture de l'onglet, retour le lendemain
 
-Le dernier point n'est pas une formalité : c'est exactement là que le piège
-`SameSite` se manifeste, et nulle part avant.
+Le dernier point n'est pas une formalité. C'est là, et nulle part avant, que se
+manifeste un problème de cookie.

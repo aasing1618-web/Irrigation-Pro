@@ -326,3 +326,63 @@ enregistrable. **L'application web et l'API doivent partager le même domaine**
 (`app.exemple.com` + `api.exemple.com`). Deux hébergeurs gratuits sur deux
 domaines différents ne fonctionneront pas. Passer à `SameSite=None` rouvrirait
 la CSRF : c'est refusé. Voir `docs/DEPLOIEMENT.md`.
+
+---
+
+## D-014 — Pas de nom de domaine : tout est servi depuis **une seule origine**
+
+**Décidé par le propriétaire le 2026-08-11 :** « je ne veux pas de nom de
+domaine à moi pour l'instant ».
+
+**Le problème que cela posait.** D-013 fait reposer la session sur un cookie
+`SameSite=Strict`, qui raisonne en domaine enregistrable. Sur deux hébergeurs
+gratuits — `…vercel.app` d'un côté, `…onrender.com` de l'autre — le cookie ne
+part jamais. Le client ne resterait jamais connecté. Et `SameSite=None`
+rouvrirait la CSRF : refusé.
+
+**Ce qui a été retenu :** ne pas déployer trois choses, mais **une seule**. Un
+unique processus Express sert l'API sous `/api/*`, le logiciel client sous `/`,
+et le dashboard sous `/admin/*`. Il n'y a plus qu'une origine, donc plus de
+problème de cookie — **et plus de CORS du tout.**
+
+Le site vitrine reste à part, sur n'importe quel hébergement statique gratuit :
+il n'a ni cookie, ni secret, ni appel réseau.
+
+**Ce n'est pas un pis-aller.** C'est la topologie la plus simple : un
+déploiement, un certificat, une facture, zéro configuration CORS. Le jour où un
+domaine sera pris, il se branchera sur ce même service sans rien réécrire.
+
+**Ce qu'il faut savoir :** le logiciel et le dashboard partagent alors le même
+cookie. Se connecter comme administrateur dans le même navigateur remplace la
+session client. C'est le comportement normal du web, pas un défaut — mais pour
+travailler sur les deux à la fois, il faut une fenêtre de navigation privée.
+
+**Ce qui reste à écrire :** le service statique dans Express, et l'interface qui
+vise sa propre origine plutôt qu'une adresse absolue. Voir
+`docs/DEPLOIEMENT.md`.
+
+---
+
+## D-015 — Les rapports PDF vont sur un **disque persistant**
+
+**Décidé par le propriétaire le 2026-08-11.** Alternative écartée pour
+l'instant : Supabase Storage.
+
+**Pourquoi c'est le bon choix aujourd'hui :** aucune ligne de code à changer.
+Les rapports sont figés sur disque depuis la Vague 3, précisément pour qu'une
+référence déjà imprimée ne désigne jamais un document différent.
+
+**Ce que cela exclut, définitivement :** tout hébergement « sans serveur »
+(Vercel Functions, Netlify Functions, Cloudflare Workers). Pas de disque, et le
+limiteur de débit en mémoire cesserait de fonctionner dès qu'il y aurait
+plusieurs instances. Cela exclut aussi l'offre **gratuite** de Render, qui n'a
+pas de disque : les rapports déjà remis à des clients disparaîtraient au
+prochain redémarrage.
+
+**Ce que cela impose :** `backend/storage/` doit être **sauvegardé** au même
+rythme que la base. Un disque persistant persiste ; il ne se restaure pas tout
+seul. Et son chemin doit devenir configurable par variable d'environnement.
+
+**Quand rouvrir la question :** le jour où la perte de ces fichiers ferait
+vraiment mal. Supabase Storage sera alors la suite logique, puisque la base y
+est déjà.
