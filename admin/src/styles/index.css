@@ -1,0 +1,247 @@
+@import 'tailwindcss';
+
+/* ==========================================================================
+   Irrigation Pro — jetons de design (dashboard d'administration)
+   --------------------------------------------------------------------------
+   ⚠ Ce fichier est la COPIE CONFORME de `app/src/styles/index.css`. Le
+   propriétaire passe de son dashboard à l'application de ses clients dans la
+   même journée : les deux doivent être reconnaissables comme un seul produit.
+   Toute retouche de l'identité visuelle se fait dans les deux fichiers, ou
+   dans aucun.
+
+   Toutes les couleurs, graisses, rayons et ombres du produit sont déclarés ici
+   et NULLE PART ailleurs. Aucun composant n'écrit une couleur en dur : il
+   utilise un jeton.
+
+   L'univers chromatique part d'un bleu-vert profond (« pétrole ») : le produit
+   parle d'eau et d'agronomie, dans un contexte d'ingénierie. Sobre, dense,
+   sans effet — la couleur sert l'information, elle ne décore pas.
+   ========================================================================== */
+
+@theme {
+  /* --- Marque : bleu-vert profond ---------------------------------------- */
+  --color-brand-50: #eef6f6;
+  --color-brand-100: #d4e9e9;
+  --color-brand-200: #a9d2d4;
+  --color-brand-300: #74b4b8;
+  --color-brand-400: #45949a;
+  --color-brand-500: #2b787f;
+  --color-brand-600: #1f6067;
+  --color-brand-700: #1a4d54;
+  --color-brand-800: #163e45;
+  --color-brand-900: #123239;
+  --color-brand-950: #0b2229;
+
+  /* --- Neutres froids : texte, bordures, fonds ---------------------------- */
+  --color-ink-900: #0e191d; /* titres */
+  --color-ink-800: #1b2c32;
+  --color-ink-700: #2b3f46; /* corps de texte */
+  --color-ink-600: #465c64;
+  --color-ink-500: #5c7178; /* texte secondaire (4.9:1 sur blanc) */
+  --color-ink-400: #7f939a; /* texte tertiaire, grands caractères */
+  --color-ink-300: #a9b9be;
+  --color-ink-200: #cfdadd; /* bordures marquées */
+  --color-ink-100: #e2eaec; /* bordures discrètes */
+  --color-ink-50: #f1f5f6;
+
+  /* --- Surfaces ---------------------------------------------------------- */
+  --color-canvas: #f4f8f8; /* fond de la zone de contenu */
+  --color-surface: #ffffff; /* cartes, panneaux */
+  --color-surface-sunken: #eef4f4; /* zones creuses, états vides */
+
+  /* --- Sémantique d'état -------------------------------------------------- */
+  --color-success: #1c7350;
+  --color-success-soft: #e7f4ee;
+  --color-success-border: #b9ddcb;
+
+  --color-warning: #8a5a0b;
+  --color-warning-soft: #fdf3e0;
+  --color-warning-border: #edd6a8;
+
+  --color-danger: #9c3327;
+  --color-danger-soft: #fbeceb;
+  --color-danger-border: #eec4bf;
+
+  --color-info: var(--color-brand-600);
+  --color-info-soft: var(--color-brand-50);
+  --color-info-border: var(--color-brand-200);
+
+  /* Mêmes états, transposés pour les surfaces sombres (barre latérale, écran
+     de démarrage) : un rouge foncé sur un fond foncé ne se lit pas. */
+  --color-success-on-dark: #7ed0a9;
+  --color-warning-on-dark: #efc684;
+  --color-danger-on-dark: #f1a89e;
+
+  /* --- Typographie : une seule famille, système --------------------------- */
+  --font-sans:
+    'Segoe UI Variable Text', 'Segoe UI', system-ui, -apple-system, 'Inter',
+    'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Cascadia Mono', 'Consolas', ui-monospace, 'SF Mono', monospace;
+
+  /* Échelle fixe, rapport ~1.18 : une interface métier ne doit pas fluctuer. */
+  --text-2xs: 0.6875rem; /* 11px — étiquettes de section */
+  --text-2xs--line-height: 1rem;
+  --text-xs: 0.75rem; /* 12px */
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.8125rem; /* 13px — libellés, métadonnées */
+  --text-sm--line-height: 1.25rem;
+  --text-base: 0.875rem; /* 14px — corps par défaut */
+  --text-base--line-height: 1.375rem;
+  --text-md: 1rem; /* 16px */
+  --text-md--line-height: 1.5rem;
+  --text-lg: 1.125rem; /* 18px — titres de carte */
+  --text-lg--line-height: 1.5rem;
+  --text-xl: 1.375rem; /* 22px — titre de page */
+  --text-xl--line-height: 1.75rem;
+  --text-2xl: 1.75rem; /* 28px — écran de démarrage */
+  --text-2xl--line-height: 2.125rem;
+
+  /* --- Rayons ------------------------------------------------------------- */
+  --radius-xs: 3px;
+  --radius-sm: 5px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-xl: 13px;
+
+  /* --- Élévation : décalage + flou, jamais un halo centré ----------------- */
+  --shadow-subtle: 0 1px 2px -1px rgb(14 25 29 / 0.1), 0 1px 1px rgb(14 25 29 / 0.04);
+  --shadow-raised: 0 2px 4px -2px rgb(14 25 29 / 0.12), 0 4px 10px -4px rgb(14 25 29 / 0.1);
+  --shadow-overlay: 0 8px 16px -8px rgb(14 25 29 / 0.24), 0 16px 32px -16px rgb(14 25 29 / 0.16);
+
+  /* --- Mouvement : court, sortie exponentielle ---------------------------- */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --animate-rise: rise 0.24s var(--ease-out-quart) both;
+  --animate-pulse-soft: pulse-soft 1.8s var(--ease-out-quart) infinite;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ==========================================================================
+   Base — y compris les surfaces dessinées par le navigateur (sélection,
+   curseur de saisie, barres de défilement, anneau de focus). Laissées par
+   défaut, elles trahissent une interface assemblée plutôt que construite.
+   ========================================================================== */
+
+@layer base {
+  :root {
+    color-scheme: light;
+    accent-color: var(--color-brand-600);
+    caret-color: var(--color-brand-600);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background-color: var(--color-canvas);
+    color: var(--color-ink-700);
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+    overscroll-behavior: none;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--color-ink-900);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  p {
+    text-wrap: pretty;
+    margin: 0;
+  }
+
+  ::selection {
+    background-color: var(--color-brand-200);
+    color: var(--color-brand-950);
+  }
+
+  /* Chiffres alignés partout : dans un logiciel de calcul, les colonnes de
+     valeurs doivent se lire en pile. */
+  :where(td, th, output, time, [data-numeric]) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Anneau de focus unique, visible, jamais supprimé. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+
+  /* Barres de défilement discrètes, aux couleurs du produit. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-ink-300) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-ink-300);
+    border: 3px solid transparent;
+    border-radius: 999px;
+    background-clip: content-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-ink-400);
+  }
+
+  /* La barre latérale est sombre : ses surfaces navigateur suivent. */
+  [data-surface='dark'] {
+    scrollbar-color: var(--color-brand-700) transparent;
+  }
+
+  [data-surface='dark'] :focus-visible {
+    outline-color: var(--color-brand-300);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

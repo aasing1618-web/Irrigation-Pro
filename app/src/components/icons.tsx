@@ -327,6 +327,19 @@ export function RunIcon(props: IconProps) {
   );
 }
 
+/* --- Rapports (Vague 3) ---------------------------------------------------- */
+
+/** Flèche vers un plateau — « enregistrer ce document sur mon ordinateur ». */
+export function DownloadIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M12 3.5v10.5" />
+      <path d="m7.75 10 4.25 4 4.25-4" />
+      <path d="M4.5 17v2a1.5 1.5 0 0 0 1.5 1.5h12a1.5 1.5 0 0 0 1.5-1.5v-2" />
+    </Icon>
+  );
+}
+
 export function InfoIcon(props: IconProps) {
   return (
     <Icon {...props}>

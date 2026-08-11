@@ -1,34 +1,25 @@
 /**
- * Client HTTP unique de l'application.
+ * Client HTTP unique du dashboard.
  *
- * Tout appel au serveur Irrigation Pro passe par ici — aucun `fetch` direct
- * ailleurs dans le code. Cela garantit un seul endroit où sont appliqués :
+ * Adapté de `app/src/lib/api.ts` : même contrat d'erreur, même transport de
+ * jetons, même rafraîchissement mutualisé. Tout appel au serveur passe par ici
+ * — aucun `fetch` direct ailleurs dans le code. C'est ce qui garantit un seul
+ * endroit où sont appliqués :
  *   - l'adresse de base validée (HTTPS obligatoire hors développement local) ;
  *   - le délai d'expiration des requêtes ;
  *   - la normalisation des erreurs ;
  *   - l'injection du jeton d'accès ;
  *   - le rafraîchissement automatique de la session, et la fin de session.
  *
- * Rappel décision D-007 : aucune formule de calcul métier ne vit côté client.
- * Ce module envoie des paramètres et reçoit des résultats, rien de plus.
- *
- * ## Transport des jetons (D-005b — à conserver tel quel)
+ * ## Transport des jetons
  *
  * Jeton d'accès dans l'en-tête `Authorization: Bearer …`, jeton de
  * rafraîchissement dans le corps JSON de `/api/auth/login` et
- * `/api/auth/refresh`. **Aucun cookie**, d'où le `credentials: 'omit'` :
- * l'application est servie depuis `tauri://localhost` et appelle une autre
- * origine ; un cookie y serait un cookie tierce-partie, soumis au bon vouloir
- * de la WebView de Windows.
- *
- * ## Cycle d'import assumé
- *
- * `api.ts` ⇄ `auth-store.ts` s'importent mutuellement. C'est volontaire et sans
- * danger : aucun des deux modules n'appelle l'autre pendant son évaluation,
- * uniquement depuis le corps de fonctions. Le client HTTP a besoin de la
- * session (jeton, rafraîchissement) et la session a besoin du client HTTP
- * (login, refresh) — les séparer artificiellement coûterait plus cher en
- * indirection que ce cycle ne coûte en lisibilité.
+ * `/api/auth/refresh`. **Aucun cookie**, d'où le `credentials: 'omit'` : le
+ * dashboard est servi depuis `http://localhost:5174` et appelle une autre
+ * origine. Un en-tête ne part que si on le met ; un cookie partirait tout seul,
+ * y compris sur une requête déclenchée par un autre site — l'authentification
+ * par en-tête est ce qui rend le CSRF sans objet ici.
  */
 
 import { getConfig } from './config';
@@ -38,7 +29,7 @@ import {
   handleSuspendedResponse,
   markPasswordChangeRequired,
   refreshAccessToken,
-} from './auth-store';
+} from './session';
 
 /** Format d'erreur renvoyé par le backend. */
 interface BackendErrorBody {
@@ -50,7 +41,7 @@ interface BackendErrorBody {
 }
 
 /**
- * Erreur normalisée exposée au reste de l'application.
+ * Erreur normalisée exposée au reste du dashboard.
  *
  * `status` vaut 0 lorsque la requête n'a jamais atteint le serveur
  * (serveur éteint, pas de réseau, délai dépassé).
@@ -59,11 +50,7 @@ export class ApiError extends Error {
   readonly code: string;
   readonly status: number;
   readonly details: unknown;
-  /**
-   * Identifiant de la requête (en-tête `X-Request-Id`), fourni par le serveur.
-   * Affiché discrètement dans les écrans d'erreur : c'est ce que l'utilisateur
-   * communique au support pour qu'on retrouve la trace exacte côté serveur.
-   */
+  /** En-tête `X-Request-Id` fourni par le serveur, pour retrouver la trace. */
   readonly requestId: string | null;
 
   constructor(
@@ -101,7 +88,7 @@ export const ApiErrorCode = {
   UNKNOWN: 'UNKNOWN_ERROR',
 } as const;
 
-/** Codes d'erreur d'authentification définis par le contrat d'API. */
+/** Codes d'erreur définis par les contrats d'API (Vagues 1 et 3). */
 export const AuthErrorCode = {
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   ACCOUNT_SUSPENDED: 'ACCOUNT_SUSPENDED',
@@ -110,6 +97,13 @@ export const AuthErrorCode = {
   PASSWORD_TOO_WEAK: 'PASSWORD_TOO_WEAK',
   PASSWORD_UNCHANGED: 'PASSWORD_UNCHANGED',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
+} as const;
+
+/** Codes propres à l'administration (contrat Vague 3, § 3). */
+export const AdminErrorCode = {
+  EMAIL_DEJA_UTILISE: 'EMAIL_DEJA_UTILISE',
+  ACTION_IMPOSSIBLE: 'ACTION_IMPOSSIBLE',
+  NOT_FOUND: 'NOT_FOUND',
 } as const;
 
 /**
@@ -134,8 +128,6 @@ export interface RequestOptions {
   timeoutMs?: number;
   /** Voir `AuthMode`. */
   auth?: AuthMode;
-  /** En-tête `Accept` ; `application/json` par défaut. */
-  accept?: string;
 }
 
 function asString(value: unknown, fallback: string): string {
@@ -151,11 +143,7 @@ function safeHeader(response: Response, name: string): string | null {
   }
 }
 
-/**
- * Message par défaut lorsque le serveur ne fournit pas de libellé exploitable.
- * Volontairement non technique : l'utilisateur est un agronome, pas un
- * administrateur système. Le détail brut part dans la console.
- */
+/** Message par défaut lorsque le serveur ne fournit pas de libellé exploitable. */
 function defaultMessageForStatus(status: number): string {
   if (status === 503) return "Le serveur d'Irrigation Pro est momentanément indisponible.";
   if (status === 401 || status === 403) return "Vous n'avez pas accès à cette ressource.";
@@ -177,20 +165,19 @@ async function toApiError(response: Response): Promise<ApiError> {
   const fallbackCode =
     response.status === 503 ? ApiErrorCode.SERVICE_UNAVAILABLE : `HTTP_${response.status}`;
 
-  // Exposé par le serveur via Access-Control-Expose-Headers.
   const requestId = safeHeader(response, 'X-Request-Id');
 
   const error = new ApiError(
     asString(body?.error?.code, fallbackCode),
     // Les messages du backend sont rédigés en français et affichables tels
-    // quels ; on peut donc les reprendre sans les reformuler.
+    // quels — un `409 ACTION_IMPOSSIBLE` explique *pourquoi* le refus, et c'est
+    // exactement ce que le propriétaire doit lire. On ne les reformule jamais.
     asString(body?.error?.message, defaultMessageForStatus(response.status)),
     response.status,
     body?.error?.details,
     requestId,
   );
 
-  // Le détail technique reste pour le développeur, jamais pour l'écran.
   console.error('[api] réponse en erreur', {
     status: response.status,
     url: response.url,
@@ -202,10 +189,7 @@ async function toApiError(response: Response): Promise<ApiError> {
   return error;
 }
 
-/**
- * Combine le signal d'annulation de l'appelant (React Query) avec le
- * déclencheur de délai d'expiration interne.
- */
+/** Combine le signal d'annulation de l'appelant avec le délai d'expiration. */
 function withTimeout(
   timeoutMs: number,
   external?: AbortSignal,
@@ -241,7 +225,6 @@ interface SendOptions {
   payload: string | undefined;
   timeoutMs: number;
   signal?: AbortSignal;
-  accept: string;
 }
 
 /**
@@ -251,7 +234,7 @@ interface SendOptions {
  * joindre le serveur lève une `ApiError`.
  */
 async function sendOnce(options: SendOptions, token: string | null): Promise<Response> {
-  const headers: Record<string, string> = { Accept: options.accept };
+  const headers: Record<string, string> = { Accept: 'application/json' };
   if (options.payload !== undefined) headers['Content-Type'] = 'application/json';
   // Le jeton d'accès est ajouté ICI, et nulle part ailleurs.
   if (token) headers.Authorization = `Bearer ${token}`;
@@ -264,7 +247,6 @@ async function sendOnce(options: SendOptions, token: string | null): Promise<Res
       headers,
       body: options.payload,
       signal: timeout.signal,
-      // L'authentification passe par un en-tête, pas par un cookie.
       credentials: 'omit',
       cache: 'no-store',
     });
@@ -307,12 +289,7 @@ async function obtainFreshAccessToken(tokenUsed: string | null): Promise<string 
   return refreshAccessToken();
 }
 
-/**
- * Répercute sur la session ce que dit une réponse en erreur.
- *
- * C'est le seul endroit qui décide de renvoyer l'utilisateur à l'écran de
- * connexion.
- */
+/** Répercute sur la session ce que dit une réponse en erreur. */
 function applySessionSideEffects(error: ApiError, auth: AuthMode): void {
   if (auth !== 'required') return;
 
@@ -330,18 +307,13 @@ function applySessionSideEffects(error: ApiError, auth: AuthMode): void {
 }
 
 /**
- * Le trajet complet d'une requête, jusqu'à une réponse **en succès**.
+ * Exécute un appel typé vers le backend.
  *
- * Jeton, rafraîchissement, effets de session et normalisation des erreurs sont
- * ici et nulle part ailleurs. Ce qui reste à l'appelant, c'est uniquement la
- * façon de lire le corps : du JSON pour les données, un binaire pour un PDF.
- * Un rapport ne doit pas court-circuiter le rafraîchissement automatique sous
- * prétexte qu'il ne renvoie pas du JSON.
+ * `T` décrit la forme attendue de la réponse. Le client ne valide pas le schéma
+ * en profondeur : chaque appelant reste responsable de lire défensivement les
+ * champs optionnels.
  */
-async function performRequest(
-  path: string,
-  options: RequestOptions,
-): Promise<{ response: Response; url: string }> {
+export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const config = getConfig();
   const {
     method = 'GET',
@@ -349,7 +321,6 @@ async function performRequest(
     signal,
     timeoutMs = config.requestTimeoutMs,
     auth = 'required',
-    accept = 'application/json',
   } = options;
 
   const send: SendOptions = {
@@ -358,7 +329,6 @@ async function performRequest(
     payload: body === undefined ? undefined : JSON.stringify(body),
     timeoutMs,
     signal,
-    accept,
   };
 
   const tokenUsed = auth === 'none' ? null : getAccessToken();
@@ -380,30 +350,6 @@ async function performRequest(
     throw error;
   }
 
-  return { response, url: send.url };
-}
-
-/** Corps de réponse illisible : même diagnostic pour du JSON et pour un binaire. */
-function unreadableBody(url: string, status: number, cause: unknown): ApiError {
-  console.error('[api] réponse illisible', { url, cause });
-  return new ApiError(
-    ApiErrorCode.INVALID_RESPONSE,
-    "La réponse du serveur d'Irrigation Pro est illisible.",
-    status,
-    cause,
-  );
-}
-
-/**
- * Exécute un appel typé vers le backend.
- *
- * `T` décrit la forme attendue de la réponse. Le client ne valide pas le schéma
- * en profondeur : chaque appelant reste responsable de lire défensivement les
- * champs optionnels.
- */
-export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { response, url } = await performRequest(path, options);
-
   if (response.status === 204) {
     return undefined as T;
   }
@@ -411,31 +357,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   try {
     return (await response.json()) as T;
   } catch (cause) {
-    throw unreadableBody(url, response.status, cause);
-  }
-}
-
-/**
- * Récupère un fichier binaire — aujourd'hui, les rapports PDF.
- *
- * Pourquoi passer par ici plutôt que par un simple `<a href>` : la route de
- * téléchargement exige l'en-tête `Authorization`, qu'un lien ne peut pas
- * porter. Mettre le jeton dans l'URL serait la seule autre option — il finirait
- * dans les journaux du serveur et dans l'historique de la WebView.
- */
-export async function apiFileRequest(
-  path: string,
-  options: RequestOptions = {},
-): Promise<Blob> {
-  const { response, url } = await performRequest(path, {
-    ...options,
-    accept: options.accept ?? 'application/pdf',
-  });
-
-  try {
-    return await response.blob();
-  } catch (cause) {
-    throw unreadableBody(url, response.status, cause);
+    console.error('[api] réponse illisible', { url: send.url, cause });
+    throw new ApiError(
+      ApiErrorCode.INVALID_RESPONSE,
+      "La réponse du serveur d'Irrigation Pro est illisible.",
+      response.status,
+      cause,
+    );
   }
 }
 
@@ -443,10 +371,22 @@ export async function apiFileRequest(
 export function normalizeError(cause: unknown): ApiError {
   if (cause instanceof ApiError) return cause;
   console.error('[api] erreur inattendue', cause);
-  return new ApiError(
-    ApiErrorCode.UNKNOWN,
-    'Une erreur inattendue est survenue.',
-    0,
-    cause,
-  );
+  return new ApiError(ApiErrorCode.UNKNOWN, 'Une erreur inattendue est survenue.', 0, cause);
+}
+
+/**
+ * Construit une chaîne de requête en ignorant les valeurs vides.
+ *
+ * Un filtre non renseigné doit être **absent** de l'URL, pas présent et vide :
+ * `?statut=` serait refusé par le schéma `zod` du serveur, qui n'accepte que
+ * `ACTIF` ou `SUSPENDU`.
+ */
+export function queryString(params: Record<string, string | number | undefined | null>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue;
+    search.set(key, String(value));
+  }
+  const rendered = search.toString();
+  return rendered === '' ? '' : `?${rendered}`;
 }

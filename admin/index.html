@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+    <!--
+      Outil interne : aucun référencement, aucune ressource distante. Les seuls
+      appels réseau autorisés vont au backend Irrigation Pro.
+    -->
+    <meta name="robots" content="noindex, nofollow" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' https: http://localhost:* ws://localhost:*; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+    <title>Administration — Irrigation Pro</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
