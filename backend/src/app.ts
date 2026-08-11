@@ -9,12 +9,13 @@
  * Ordre des middlewares (il compte) :
  *   1. identifiant de requête   → présent dans tous les journaux qui suivent
  *   2. helmet                   → en-têtes de sécurité
- *   3. CORS                     → liste blanche stricte d'origines
- *   4. express.json             → corps JSON, taille plafonnée
- *   5. pino-http                → journalisation des requêtes
- *   6. routes                   → /health, /version, puis /api (avec limiteur)
- *   7. 404                      → route inconnue
- *   8. gestionnaire d'erreurs   → toujours en dernier
+ *   3. Vary: Origin             → correction de cache, sur toutes les réponses
+ *   4. CORS                     → liste blanche stricte d'origines
+ *   5. express.json             → corps JSON, taille plafonnée
+ *   6. pino-http                → journalisation des requêtes
+ *   7. routes                   → /health, /version, puis /api (avec limiteur)
+ *   8. 404                      → route inconnue
+ *   9. gestionnaire d'erreurs   → toujours en dernier
  */
 
 import cors, { type CorsOptions } from 'cors';
@@ -44,10 +45,16 @@ const LIMITE_CORPS_JSON = '1mb';
  * - origine connue : autorisée ;
  * - origine inconnue : refusée explicitement en 403.
  *
- * `credentials: false` (décision D-005b) : aucun cookie n'est échangé, les
- * jetons voyagent dans l'en-tête `Authorization` et dans le corps JSON.
- * Autoriser l'envoi de credentials n'aurait donc plus d'objet — et la surface
- * CSRF classique disparaît avec les cookies.
+ * `credentials: true` (décision D-013, qui amende D-005b) : l'application web
+ * range son jeton de rafraîchissement dans un cookie `HttpOnly`, et un
+ * navigateur n'envoie un cookie en requête croisée que si le serveur autorise
+ * explicitement les credentials.
+ *
+ * La liste blanche reste donc **stricte**, et ce n'est plus seulement une bonne
+ * pratique : avec `Access-Control-Allow-Credentials: true`, un navigateur refuse
+ * purement et simplement `Access-Control-Allow-Origin: *`. Le cookie est par
+ * ailleurs `SameSite=Strict`, ce qui referme la surface CSRF que le retour des
+ * cookies aurait pu rouvrir.
  */
 const optionsCors: CorsOptions = {
   origin(origine, callback) {
@@ -61,7 +68,7 @@ const optionsCors: CorsOptions = {
     }
     callback(forbidden('Origine non autorisée.'));
   },
-  credentials: false,
+  credentials: true,
   methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   exposedHeaders: ['X-Request-Id'],
@@ -94,6 +101,17 @@ export function createApp(): Express {
       referrerPolicy: { policy: 'no-referrer' },
     }),
   );
+
+  // `Vary: Origin` sur TOUTES les réponses, y compris celles qui n'ont pas
+  // d'en-tête CORS. Le middleware `cors` ne le pose que lorsqu'une origine est
+  // présente : une réponse à un appel sans `Origin` (curl, sonde, serveur à
+  // serveur) en serait dépourvue et pourrait être resservie par un cache
+  // intermédiaire à un navigateur d'une autre origine. Le paquet `vary`
+  // déduplique, la pose par `cors` juste après est donc sans effet de bord.
+  app.use((_req, res, next) => {
+    res.vary('Origin');
+    next();
+  });
 
   app.use(cors(optionsCors));
 

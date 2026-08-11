@@ -13,9 +13,18 @@
  * appellent `auth.service`, et mettent en forme la sortie. Toute la logique
  * sensible est dans le service, où elle est testable et où elle ne peut pas
  * être contournée par une nouvelle route distraite.
+ *
+ * ── Vague 4 : transport de session (contrat `docs/API-VAGUE-4.md` § 1) ──────
+ * Le client déclare, par un champ facultatif `sessionTransport`, **où il sait
+ * ranger** son jeton de longue durée : dans le corps JSON (`"body"`, la valeur
+ * par défaut, comportement historique) ou dans un cookie `HttpOnly` posé par le
+ * serveur (`"cookie"`, l'application web). Le serveur ne devine rien.
+ *
+ * Ce choix est un détail de **transport HTTP** : il vit donc ici, dans la couche
+ * route, et `auth.service` continue d'ignorer jusqu'à l'existence d'Express.
  */
 
-import { Router, type Request, type RequestHandler } from 'express';
+import { Router, type Request, type RequestHandler, type Response } from 'express';
 import { z, type ZodTypeAny } from 'zod';
 
 import {
@@ -24,7 +33,14 @@ import {
   logout,
   refresh,
   type RequestContext,
+  type SessionTokens,
 } from '../auth/auth.service.js';
+import {
+  effacerCookieSession,
+  lireCookieSession,
+  poserCookieSession,
+  type TransportDeSession,
+} from '../auth/cookies.js';
 import { refreshTokenInvalid, validationError } from '../auth/errors.js';
 import { requireAuthAllowingPasswordChange } from '../middleware/require-auth.js';
 import { getAuthenticatedUser } from '../middleware/require-auth.js';
@@ -98,23 +114,94 @@ const schemaChangementMotDePasse = z.object({
  * Le jeton de rafraîchissement est validé à la main plutôt qu'avec `validate()`
  * : le contrat ne prévoit que `401 REFRESH_TOKEN_INVALID` sur cette route, un
  * `400` distinct laisserait fuiter la différence entre « champ absent » et
- * « jeton refusé ».
- */
-function lireJetonDeRafraichissement(corps: unknown): string {
-  if (typeof corps !== 'object' || corps === null) throw refreshTokenInvalid();
-  const valeur = (corps as { refreshToken?: unknown }).refreshToken;
-  if (typeof valeur !== 'string' || valeur.length === 0 || valeur.length > 512) {
-    throw refreshTokenInvalid();
-  }
-  return valeur;
-}
-
-/** Variante tolérante : une déconnexion ne doit jamais échouer (contrat). */
+ * « jeton refusé ». (Voir `lireJetonDeSession`, qui ajoute la lecture du cookie.)
+ *
+ * Variante tolérante : une déconnexion ne doit jamais échouer (contrat). */
 function lireJetonDeRafraichissementOptionnel(corps: unknown): string | null {
   if (typeof corps !== 'object' || corps === null) return null;
   const valeur = (corps as { refreshToken?: unknown }).refreshToken;
   if (typeof valeur !== 'string' || valeur.length === 0 || valeur.length > 512) return null;
   return valeur;
+}
+
+// ---------------------------------------------------------------------------
+// Transport de session (Vague 4)
+// ---------------------------------------------------------------------------
+
+const MESSAGE_TRANSPORT_INVALIDE =
+  'Le mode de transport de session doit valoir « body » ou « cookie ».';
+
+const schemaTransport = z.enum(['body', 'cookie']);
+
+/**
+ * Lit le champ facultatif `sessionTransport`.
+ *
+ * Renvoie `undefined` quand le client n'a **rien déclaré** — ce qui n'est pas la
+ * même chose que `"body"` déclaré explicitement : sur `/refresh`, un client
+ * muet laisse le serveur déduire le mode du canal par lequel le jeton est
+ * arrivé, alors qu'un client explicite est obéi.
+ *
+ * Toute autre valeur, `null` compris, est un `400 VALIDATION_ERROR` : le contrat
+ * décrit `z.enum(['body','cookie']).optional()`, et `optional()` n'accepte que
+ * l'absence.
+ */
+function lireTransportDeclare(corps: unknown): TransportDeSession | undefined {
+  if (typeof corps !== 'object' || corps === null) return undefined;
+  const valeur = (corps as { sessionTransport?: unknown }).sessionTransport;
+  if (valeur === undefined) return undefined;
+
+  const resultat = schemaTransport.safeParse(valeur);
+  if (!resultat.success) {
+    throw validationError(MESSAGE_TRANSPORT_INVALIDE, { champs: ['sessionTransport'] });
+  }
+  return resultat.data;
+}
+
+/**
+ * Envoie une session au client selon le transport retenu.
+ *
+ * En mode `"cookie"`, `refreshToken` est **retiré du corps** : c'est tout
+ * l'intérêt de la manœuvre, le secret de 30 jours n'entre jamais dans l'espace
+ * mémoire du JavaScript de la page.
+ *
+ * `sessionTransport` est renvoyé dans les **deux** modes, pour que le client
+ * puisse vérifier que le serveur a bien compris ce qu'il avait demandé.
+ */
+function envoyerSession<T extends SessionTokens>(
+  res: Response,
+  session: T,
+  transport: TransportDeSession,
+): void {
+  if (transport === 'cookie') {
+    const { refreshToken, ...sansJeton } = session;
+    poserCookieSession(res, refreshToken);
+    res.status(200).json({ ...sansJeton, sessionTransport: 'cookie' });
+    return;
+  }
+
+  res.status(200).json({ ...session, sessionTransport: 'body' });
+}
+
+/** D'où vient le jeton de rafraîchissement présenté par le client. */
+type ProvenanceDuJeton = { jeton: string; provenance: TransportDeSession };
+
+/**
+ * Retrouve le jeton de rafraîchissement d'une requête, dans l'ordre du contrat :
+ *
+ *   1. `refreshToken` dans le corps JSON ;
+ *   2. à défaut, cookie `ip_refresh` ;
+ *   3. aucun des deux → `401 REFRESH_TOKEN_INVALID`, **exactement** la réponse
+ *      d'un jeton refusé. Une session absente et une session invalide restent
+ *      indistinguables : même code, même message, aucun en-tête distinctif.
+ */
+function lireJetonDeSession(req: Request): ProvenanceDuJeton {
+  const duCorps = lireJetonDeRafraichissementOptionnel(req.body);
+  if (duCorps !== null) return { jeton: duCorps, provenance: 'body' };
+
+  const duCookie = lireCookieSession(req);
+  if (duCookie !== null) return { jeton: duCookie, provenance: 'cookie' };
+
+  throw refreshTokenInvalid();
 }
 
 // ---------------------------------------------------------------------------
@@ -134,29 +221,68 @@ authRouter.post(
   validerCorps(schemaConnexion, MESSAGE_LOGIN_INVALIDE),
   async (req, res) => {
     const corps = lireCorps<z.infer<typeof schemaConnexion>>(res);
+    const transport = lireTransportDeclare(req.body) ?? 'body';
     const resultat = await login(
       { email: corps.email, password: corps.password },
       contexteDeRequete(req),
     );
-    res.status(200).json(resultat);
+    envoyerSession(res, resultat, transport);
   },
 );
 
-/** `POST /api/auth/refresh` — prolonger la session (rotation obligatoire). */
+/**
+ * `POST /api/auth/refresh` — prolonger la session (rotation obligatoire).
+ *
+ * Le mode de réponse suit le client quand il se déclare, et à défaut le canal
+ * par lequel le jeton est arrivé. La détection de réutilisation et la révocation
+ * en cascade sont indifférentes à tout cela : elles opèrent en base, sur la
+ * valeur du jeton, sans savoir par quel canal il est parvenu au serveur.
+ *
+ * Un point mérite l'attention : si le jeton vient du cookie mais que le client
+ * réclame explicitement le mode `"body"`, le cookie est **effacé**. Le laisser
+ * en place serait dangereux — il porte désormais un jeton révoqué par
+ * `ROTATION`, et son retour lors d'un prochain rafraîchissement serait pris pour
+ * un vol, coupant toutes les sessions du compte.
+ *
+ * En cas d'échec, en revanche, **aucun** en-tête `Set-Cookie` n'est émis : sans
+ * cette précaution, une session invalide se distinguerait d'une session absente
+ * par la seule présence de l'en-tête.
+ */
 authRouter.post('/refresh', authRateLimiter, async (req, res) => {
-  const refreshToken = lireJetonDeRafraichissement(req.body);
-  const resultat = await refresh({ refreshToken }, contexteDeRequete(req));
-  res.status(200).json(resultat);
+  const declare = lireTransportDeclare(req.body);
+  const source = lireJetonDeSession(req);
+
+  const resultat = await refresh({ refreshToken: source.jeton }, contexteDeRequete(req));
+
+  const transport = declare ?? source.provenance;
+  if (transport === 'body' && source.provenance === 'cookie') {
+    effacerCookieSession(res);
+  }
+
+  envoyerSession(res, resultat, transport);
 });
 
-/** `POST /api/auth/logout` — fermer la session courante. Toujours `204`. */
+/**
+ * `POST /api/auth/logout` — fermer la session courante. Toujours `204`.
+ *
+ * Le jeton est cherché dans le corps puis dans le cookie, afin que la session
+ * soit réellement révoquée en base quel que soit le transport utilisé.
+ *
+ * Le cookie est ensuite effacé **systématiquement**, sans regarder ce que le
+ * client a déclaré : effacer un cookie absent ne coûte rien, alors qu'oublier
+ * d'en effacer un laisserait un secret de 30 jours dans le navigateur.
+ *
+ * `sessionTransport` n'est volontairement **pas** validé ici. Le contrat exige
+ * de cette route qu'elle réponde *toujours* `204` — un utilisateur qui veut
+ * partir doit pouvoir partir — et la valeur n'est de toute façon pas utilisée.
+ */
 authRouter.post('/logout', requireAuthAllowingPasswordChange, async (req, res) => {
   const utilisateur = getAuthenticatedUser(res);
-  await logout(
-    { refreshToken: lireJetonDeRafraichissementOptionnel(req.body) },
-    utilisateur,
-    contexteDeRequete(req),
-  );
+  const jeton = lireJetonDeRafraichissementOptionnel(req.body) ?? lireCookieSession(req);
+
+  await logout({ refreshToken: jeton }, utilisateur, contexteDeRequete(req));
+
+  effacerCookieSession(res);
   res.status(204).end();
 });
 
@@ -187,12 +313,13 @@ authRouter.post(
   validerCorps(schemaChangementMotDePasse, MESSAGE_CHANGEMENT_INVALIDE),
   async (req, res) => {
     const corps = lireCorps<z.infer<typeof schemaChangementMotDePasse>>(res);
+    const transport = lireTransportDeclare(req.body) ?? 'body';
     const utilisateur = getAuthenticatedUser(res);
     const resultat = await changePassword(
       { currentPassword: corps.currentPassword, newPassword: corps.newPassword },
       utilisateur,
       contexteDeRequete(req),
     );
-    res.status(200).json(resultat);
+    envoyerSession(res, resultat, transport);
   },
 );

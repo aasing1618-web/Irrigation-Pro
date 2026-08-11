@@ -12,9 +12,11 @@ import { useState, type ReactNode } from 'react';
 import { useAuth } from '../auth/AuthProvider';
 import { cn } from '../lib/cn';
 import { APP_VERSION } from '../lib/version';
+import { buildWhatsAppLink } from '../lib/whatsapp';
 import { Button } from './Button';
 import {
   CalculationsIcon,
+  ChatIcon,
   DashboardIcon,
   LogoutIcon,
   ProjectsIcon,
@@ -101,11 +103,41 @@ export function Sidebar() {
 
       <footer className="mt-6 border-t border-white/8 px-4 py-4">
         <AccountBlock />
-        <p className="mt-4 px-1 text-2xs text-brand-400" data-numeric>
-          Version {APP_VERSION} · Poste Windows
+        <SupportLink />
+        <p className="mt-3 px-1 text-2xs text-brand-400" data-numeric>
+          Version {APP_VERSION}
         </p>
       </footer>
     </nav>
+  );
+}
+
+/**
+ * Accès permanent à l'assistance, en bas de la navigation.
+ *
+ * Discret par construction — une ligne de texte, pas un bouton, et surtout pas
+ * une pastille flottante : c'est un recours, pas une action de travail. Il
+ * reste néanmoins visible depuis n'importe quel écran, parce que le moment où
+ * l'on a besoin d'aide est rarement celui où l'on a envie de la chercher.
+ */
+function SupportLink() {
+  const { user } = useAuth();
+
+  return (
+    <a
+      href={buildWhatsAppLink(user ?? {})}
+      target="_blank"
+      rel="noopener noreferrer"
+      className={cn(
+        'mt-3 flex items-center gap-2 rounded-md px-1 py-1.5 text-sm',
+        'text-brand-300 transition-colors duration-150 ease-out-quart hover:text-white',
+      )}
+    >
+      <span aria-hidden="true" className="text-[1.05rem] leading-none">
+        <ChatIcon />
+      </span>
+      <span>Assistance WhatsApp</span>
+    </a>
   );
 }
 

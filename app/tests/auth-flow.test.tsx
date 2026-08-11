@@ -366,6 +366,7 @@ describe('reprise de session au démarrage', () => {
     return {
       store: {
         kind: 'memory' as const,
+        transport: 'body' as const,
         survivesRestart: false,
         read: () => read(),
         write: (next: string) => {

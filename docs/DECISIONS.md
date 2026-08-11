@@ -290,3 +290,39 @@ cause : pas d'API de paiement, pas de webhook, pas de clé de licence, pas
 d'empreinte matérielle, pas d'expiration automatique. Le seul contrôle d'accès
 est le statut de compte `ACTIF` / `SUSPENDU`, modifié à la main par
 l'administrateur depuis son dashboard.
+
+---
+
+## D-013 — La cible est le **web**, et le jeton de session passe par un cookie `HttpOnly`
+
+**Décidé par le propriétaire le 2026-08-11 :** « choisis pour l'instant une
+application web ». La coque Tauri **reste dans le dépôt, intacte** : « pour
+l'instant » a été pris au mot, la décision est réversible sans réécriture.
+
+**Ce que ça change, et c'est la seule chose :** dans un navigateur, appuyer sur
+F5 vide la mémoire vive. Le jeton de rafraîchissement y vivait
+(`app/src/lib/secure-store.ts`). Tel quel, le client aurait été déconnecté à
+chaque rechargement de page — inacceptable pour un logiciel de travail
+quotidien.
+
+**Ce qui a été retenu :** un cookie `ip_refresh`, `HttpOnly` · `Secure` ·
+`SameSite=Strict` · `Path=/api/auth` · 30 jours. Le serveur seul le pose et le
+lit ; le JavaScript de la page ne peut pas y accéder — c'est précisément
+l'objectif : **une faille XSS ne donne pas 30 jours d'accès au compte.**
+
+**Ce que ça amende :** D-005b (« aucun cookie »). Ce raisonnement valait pour un
+logiciel installé, où la coque Tauri offre le trousseau de Windows. Il ne vaut
+plus dans un navigateur, où les seules options sont le cookie `HttpOnly` ou
+`localStorage` — et `localStorage` est lisible par tout script de la page.
+**`localStorage` et `sessionStorage` restent interdits**, sans exception.
+
+**Ce que ça n'a pas changé :** le transport par corps JSON reste en place et
+reste le comportement par défaut. La coque Tauri, un script, un test continuent
+de fonctionner exactement comme avant. Le serveur ne devine rien : le client
+déclare où il sait ranger son jeton (`sessionTransport`).
+
+**Ce que ça impose au déploiement :** `SameSite=Strict` raisonne en domaine
+enregistrable. **L'application web et l'API doivent partager le même domaine**
+(`app.exemple.com` + `api.exemple.com`). Deux hébergeurs gratuits sur deux
+domaines différents ne fonctionneront pas. Passer à `SameSite=None` rouvrirait
+la CSRF : c'est refusé. Voir `docs/DEPLOIEMENT.md`.

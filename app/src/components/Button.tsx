@@ -2,9 +2,15 @@
  * Bouton du produit — un seul composant, donc une seule forme de bouton dans
  * toute l'application. Tous les états sont couverts : repos, survol, focus
  * clavier, appui, désactivé, chargement.
+ *
+ * `ButtonLink` partage exactement la même apparence pour les rares cas où
+ * l'action est **une navigation vers l'extérieur** (le lien WhatsApp) : c'est
+ * alors un `<a>`, parce qu'un lecteur d'écran et un clic-milieu ne traitent pas
+ * un lien comme un bouton. Les styles ne sont pas recopiés : les deux
+ * composants lisent les mêmes tables ci-dessous.
  */
 
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
 import { cn } from '../lib/cn';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'onDark';
@@ -75,6 +81,46 @@ export function Button({
       <span>{children}</span>
       {loading ? <span className="sr-only">{loadingLabel}</span> : null}
     </button>
+  );
+}
+
+export interface ButtonLinkProps extends AnchorHTMLAttributes<HTMLAnchorElement> {
+  variant?: Variant;
+  size?: Size;
+  icon?: ReactNode;
+}
+
+/**
+ * Lien d'action, à l'apparence d'un bouton.
+ *
+ * `target="_blank"` s'accompagne toujours de `rel="noopener noreferrer"` : sans
+ * lui, la page ouverte garde une référence vers celle-ci et peut la faire
+ * naviguer ailleurs.
+ */
+export function ButtonLink({
+  variant = 'secondary',
+  size = 'md',
+  icon,
+  className,
+  children,
+  target,
+  rel,
+  ...props
+}: ButtonLinkProps) {
+  return (
+    <a
+      {...props}
+      target={target}
+      rel={target === '_blank' ? (rel ?? 'noopener noreferrer') : rel}
+      className={cn(base, variants[variant], sizes[size], className)}
+    >
+      {icon && (
+        <span className="text-[1.15em] leading-none" aria-hidden="true">
+          {icon}
+        </span>
+      )}
+      <span>{children}</span>
+    </a>
   );
 }
 

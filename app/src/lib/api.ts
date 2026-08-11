@@ -12,14 +12,25 @@
  * Rappel décision D-007 : aucune formule de calcul métier ne vit côté client.
  * Ce module envoie des paramètres et reçoit des résultats, rien de plus.
  *
- * ## Transport des jetons (D-005b — à conserver tel quel)
+ * ## Transport des jetons (D-005b, amendée par D-013)
  *
- * Jeton d'accès dans l'en-tête `Authorization: Bearer …`, jeton de
- * rafraîchissement dans le corps JSON de `/api/auth/login` et
- * `/api/auth/refresh`. **Aucun cookie**, d'où le `credentials: 'omit'` :
- * l'application est servie depuis `tauri://localhost` et appelle une autre
- * origine ; un cookie y serait un cookie tierce-partie, soumis au bon vouloir
- * de la WebView de Windows.
+ * Le jeton d'accès voyage **toujours** dans l'en-tête `Authorization: Bearer …`.
+ * Rien ne change de ce côté.
+ *
+ * Le jeton de rafraîchissement, lui, dépend de l'endroit où tourne le
+ * logiciel (voir `secure-store.ts`) :
+ *
+ * - coque Tauri (`transport: 'body'`) : il circule dans le corps JSON, et
+ *   `credentials: 'omit'` s'applique partout — un cookie y serait un cookie
+ *   tierce-partie, soumis au bon vouloir de la WebView de Windows ;
+ * - navigateur (`transport: 'cookie'`) : il vit dans un cookie `HttpOnly` que
+ *   le navigateur doit joindre aux requêtes, d'où `credentials: 'include'`.
+ *
+ * Cette exception est **strictement bornée aux routes `/api/auth/*`**, les
+ * seules que le cookie accompagne (`Path=/api/auth` côté serveur). Partout
+ * ailleurs — projets, calculs, rapports — la règle reste `credentials: 'omit'` :
+ * une requête de travail ne doit porter aucune information d'ambiance, et une
+ * requête qui n'emporte pas de cookie n'est pas exposée à la CSRF.
  *
  * ## Cycle d'import assumé
  *
@@ -34,6 +45,7 @@
 import { getConfig } from './config';
 import {
   getAccessToken,
+  getSessionTransport,
   handleAuthenticationFailure,
   handleSuspendedResponse,
   markPasswordChangeRequired,
@@ -242,6 +254,24 @@ interface SendOptions {
   timeoutMs: number;
   signal?: AbortSignal;
   accept: string;
+  /** Voir `credentialsFor` : `include` uniquement pour le cookie de session. */
+  credentials: RequestCredentials;
+}
+
+/** Préfixe des seules routes que le cookie de session accompagne. */
+const AUTH_PATH_PREFIX = '/api/auth/';
+
+/**
+ * Décide si le navigateur doit joindre le cookie de session à cette requête.
+ *
+ * Deux conditions, toutes deux nécessaires : le logiciel tourne dans un
+ * navigateur (transport `cookie`), **et** la route est une route
+ * d'authentification. Toute autre requête part sans identité de navigateur,
+ * exactement comme avant la Vague 4.
+ */
+function credentialsFor(path: string): RequestCredentials {
+  if (getSessionTransport() !== 'cookie') return 'omit';
+  return path.startsWith(AUTH_PATH_PREFIX) ? 'include' : 'omit';
 }
 
 /**
@@ -264,8 +294,8 @@ async function sendOnce(options: SendOptions, token: string | null): Promise<Res
       headers,
       body: options.payload,
       signal: timeout.signal,
-      // L'authentification passe par un en-tête, pas par un cookie.
-      credentials: 'omit',
+      // `omit` partout, sauf le cookie de session en mode navigateur.
+      credentials: options.credentials,
       cache: 'no-store',
     });
   } catch (cause) {
@@ -352,13 +382,16 @@ async function performRequest(
     accept = 'application/json',
   } = options;
 
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
   const send: SendOptions = {
-    url: `${config.apiUrl}${path.startsWith('/') ? path : `/${path}`}`,
+    url: `${config.apiUrl}${normalizedPath}`,
     method,
     payload: body === undefined ? undefined : JSON.stringify(body),
     timeoutMs,
     signal,
     accept,
+    credentials: credentialsFor(normalizedPath),
   };
 
   const tokenUsed = auth === 'none' ? null : getAccessToken();

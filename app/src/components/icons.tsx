@@ -349,3 +349,30 @@ export function InfoIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/* --- Assistance et mises à jour (Vague 4) ---------------------------------- */
+
+/**
+ * Bulle de conversation — « écrire à votre fournisseur ».
+ *
+ * Volontairement générique : le logo de WhatsApp est une forme pleine et
+ * bicolore, qui jurerait au milieu d'un jeu d'icônes en trait de 1,5 px. Le
+ * libellé dit déjà de quel service il s'agit.
+ */
+export function ChatIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M20.5 11.6c0 4-3.8 7.1-8.5 7.1a9.8 9.8 0 0 1-2.6-.35L4.5 20l1.3-3.4a6.7 6.7 0 0 1-2.3-5c0-3.9 3.8-7.1 8.5-7.1s8.5 3.2 8.5 7.1Z" />
+      <path d="M9 11.6h.01M12 11.6h.01M15 11.6h.01" />
+    </Icon>
+  );
+}
+
+/** Croix de fermeture. */
+export function CloseIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m6.5 6.5 11 11M17.5 6.5l-11 11" />
+    </Icon>
+  );
+}

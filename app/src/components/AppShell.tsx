@@ -9,7 +9,9 @@
 import { Outlet } from 'react-router';
 import { Sidebar } from './Sidebar';
 import { StatusBadge, type StatusTone } from './StatusBadge';
+import { UpdateBanner } from './UpdateBanner';
 import { BrandMark } from './icons';
+import { useUpdateCheck } from '../hooks/useUpdateCheck';
 import type { ConnectionState } from '../hooks/useHealth';
 
 export interface AppShellProps {
@@ -17,6 +19,8 @@ export interface AppShellProps {
 }
 
 export function AppShell({ connection }: AppShellProps) {
+  const update = useUpdateCheck();
+
   return (
     <div className="flex h-full flex-col bg-canvas">
       <header className="flex h-14 shrink-0 items-center justify-between gap-6 border-b border-ink-100 bg-surface px-5">
@@ -36,6 +40,8 @@ export function AppShell({ connection }: AppShellProps) {
           <Outlet />
         </main>
       </div>
+
+      {update.version && <UpdateBanner version={update.version} onDismiss={update.dismiss} />}
     </div>
   );
 }
