@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <!-- La marque du produit : une goutte posée sur deux lignes d'écoulement.
+       Même géométrie que `BrandMark` dans l'application et le dashboard. -->
+  <path
+    d="M12 2.75c3.4 3.7 5.1 6.55 5.1 8.86A5.1 5.1 0 0 1 12 16.7a5.1 5.1 0 0 1-5.1-5.09c0-2.31 1.7-5.16 5.1-8.86Z"
+    stroke="#2b787f"
+    stroke-width="1.8"
+    stroke-linejoin="round"
+  />
+  <path d="M3.5 19.4h17M6.5 22h11" stroke="#2b787f" stroke-width="1.8" stroke-linecap="round" opacity="0.75" />
+</svg>

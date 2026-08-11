@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light" />
+
+    <!--
+      Site public : il doit être référencé, contrairement au dashboard.
+
+      En revanche il ne charge RIEN depuis l'extérieur — ni police, ni image, ni
+      script, ni mesure d'audience. La règle est écrite dans la politique de
+      sécurité ci-dessous, et vérifiée par un test : la seule adresse externe de
+      la page est le lien WhatsApp, et il n'est suivi que si le visiteur clique.
+    -->
+    <meta
+      name="description"
+      content="Irrigation Pro est un logiciel professionnel de dimensionnement en irrigation gravitaire et sous pression, pour ingénieurs agronomes, bureaux d'études et installateurs."
+    />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src 'self' ws://localhost:* http://localhost:*; object-src 'none'; base-uri 'self'; form-action 'none'"
+    />
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:site_name" content="Irrigation Pro" />
+    <meta
+      property="og:title"
+      content="Irrigation Pro — dimensionnement des périmètres irrigués"
+    />
+    <meta
+      property="og:description"
+      content="Doses, besoins en eau, canaux, réseaux sous pression, pompage : quatorze modules de calcul et une note de calcul PDF, à la place du classeur Excel."
+    />
+
+    <title>Irrigation Pro — dimensionnement des périmètres irrigués</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

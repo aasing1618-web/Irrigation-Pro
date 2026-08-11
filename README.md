@@ -79,7 +79,7 @@ précédente est validée.
 - [x] **Vague 1 — Connexion et comptes** : authentification, statut ACTIF/SUSPENDU
 - [x] **Vague 2 — Projets et calculs** : CRUD projets, besoins en eau (FAO), Manning-Strickler
 - [x] **Vague 3 — Rapports PDF et dashboard admin**
-- [ ] **Vague 4 — Finitions** : WhatsApp, version, site vitrine
+- [x] **Vague 4 — Finitions** : WhatsApp, version, détection de mise à jour, site vitrine, cible web (D-013)
 - [ ] **Vague 5 — Sécurité et tests finaux**
 
 Le compte rendu de chaque vague est publié dans [`docs/`](docs/).
