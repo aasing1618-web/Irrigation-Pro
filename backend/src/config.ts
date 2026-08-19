@@ -120,13 +120,20 @@ const schémaEnvironnement = z.object({
       'doit être un numéro international sans « + » ni espaces (8 à 15 chiffres)',
     ),
 
-  SUPABASE_URL: estTest
-    ? z.string().default('http://localhost:54321')
-    : z.string({ required_error: 'variable obligatoire' }).url('doit être une URL valide'),
+  // Accès à Supabase Storage, où vivent les rapports PDF en production.
+  //
+  // Exigés en production seulement, et c'est délibéré : hors production, les
+  // rapports sont écrits sur disque (voir `reports/stockage.ts`). Les réclamer
+  // partout empêcherait `npm run dev` et les scripts de maintenance de démarrer
+  // sans identifiants — et pousserait à coller ceux de production dans un
+  // `.env` local, c'est-à-dire exactement l'accident qu'on veut éviter.
+  SUPABASE_URL: estProduction
+    ? z.string({ required_error: 'variable obligatoire' }).url('doit être une URL valide')
+    : z.string().default('http://localhost:54321'),
 
-  SUPABASE_SERVICE_ROLE_KEY: estTest
-    ? z.string().default('test-key')
-    : z.string({ required_error: 'variable obligatoire' }).min(1),
+  SUPABASE_SERVICE_ROLE_KEY: estProduction
+    ? z.string({ required_error: 'variable obligatoire' }).min(1)
+    : z.string().default('cle-absente-hors-production'),
 });
 
 const résultat = schémaEnvironnement
