@@ -148,7 +148,7 @@ Reprise de **D-011**, à ne pas rogner :
 
 - [ ] **Réinitialiser le mot de passe de la base Supabase** — l'actuel a transité en clair dans une sortie de terminal
 - [ ] **Regénérer `JWT_SECRET`** — tout secret ayant existé en prototype est brûlé
-- [ ] Écrire le service statique dans Express (le morceau manquant ci-dessus)
+- [x] Écrire le service statique dans Express — fait, couvert par backend/tests/static.routes.test.ts
 - [ ] Recalibrer `trust proxy`, sinon le limiteur de débit voit la même adresse IP pour tout le monde
 - [ ] Renseigner `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` en production
 - [ ] Créer le bucket `rapports` (public ou privé avec politique d'accès) sur Supabase
@@ -158,3 +158,24 @@ Reprise de **D-011**, à ne pas rogner :
 
 Le dernier point n'est pas une formalité. C'est là, et nulle part avant, que se
 manifeste un problème de cookie.
+
+---
+
+## Le commutateur de stockage (à ne pas retirer)
+
+`backend/src/reports/stockage.ts` a **deux rangements** derrière la même porte :
+Supabase Storage en production, disque local ailleurs. Le choix est **sûr par
+défaut** : Supabase seulement si `NODE_ENV=production`, ou sur demande explicite.
+
+| Variable | Valeur | Effet |
+|---|---|---|
+| `REPORTS_STORAGE` | `supabase` \| `disque` | Force le rangement. À laisser vide en principe |
+| `REPORTS_STORAGE_DIR` | chemin | Racine du rangement disque. Utilisé par les tests |
+
+⚠️ **Pourquoi ce garde-fou existe.** Sans lui, lancer la suite de tests — ou
+même `npm run dev` — avec les identifiants de production écrit les PDF de test
+**dans le bucket des vrais clients**, au milieu de leurs rapports. D-011 prévoit
+un projet Supabase séparé pour les tests ; tant qu'il n'existe pas, ce
+commutateur est la seule protection.
+
+En production, il n'y a **rien à régler** : `NODE_ENV=production` suffit.

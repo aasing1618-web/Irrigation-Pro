@@ -4,44 +4,67 @@ Note de reprise, tenue à jour. À lire en premier avant de continuer le travail
 
 ---
 
-## 🔴 À FAIRE EN PREMIER — le backend est cassé
+## ✅ Le backend est réparé (2026-08-12)
 
-**22 tests échouent** dans `backend/tests/reports.routes.test.ts`. Toute
-génération de rapport renvoie **500 au lieu de 201**. Le produit ne peut plus
-produire de note de calcul.
+Les 22 tests qui échouaient repassent au vert **sans avoir été modifiés**. La
+suite complète passe de bloquée à **537 tests en 21 s**.
 
-### Cause
+`backend/src/reports/stockage.ts` est devenu **enfichable** : Supabase Storage
+(bucket `rapports`) en production, disque local ailleurs. Le commutateur est
+**sûr par défaut** — on ne parle à Supabase que si `NODE_ENV=production`, ou sur
+demande explicite par `REPORTS_STORAGE=supabase`.
 
-La bascule du stockage des PDF vers **Supabase Storage** a été commencée par une
-autre session et laissée à moitié faite. `backend/src/reports/stockage.ts` écrit
-désormais sur Supabase, mais les tests, eux, fixaient un dossier jetable via
-`REPORTS_STORAGE_DIR` — variable qui n'existe plus. Sans Storage joignable,
-l'écriture échoue et la route remonte 500.
+⚠️ **Ce commutateur n'est pas un confort, c'est un garde-fou.** Sans lui, lancer
+les tests avec les identifiants de production écrirait les PDF de test **dans le
+bucket des vrais clients**, au milieu de leurs rapports. D-011 prévoit un projet
+Supabase séparé pour les tests ; tant qu'il n'existe pas, ce commutateur est la
+seule protection. **Ne le retirez pas pour « simplifier ».**
 
-### ⚠️ Le piège caché, plus grave que la panne
+`SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` ne sont plus exigés qu'en
+production, sinon `npm run dev` et les scripts de maintenance refusaient de
+démarrer — ce qui poussait à coller les identifiants de production dans un
+`.env` local, c'est-à-dire à provoquer exactement l'accident décrit ci-dessus.
 
-Il ne faut **surtout pas** faire pointer les tests vers le vrai Supabase pour
-les faire passer : ils écriraient leurs PDF de test dans le **bucket de
-production**, au milieu des rapports réels des clients. `docs/DECISIONS.md`
-D-011 prévoit déjà « créer un projet Supabase séparé pour les tests » ; tant
-qu'il n'existe pas, les tests ne doivent joindre aucun Supabase.
+---
 
-### Le correctif retenu (diagnostic fait, code à écrire)
+## 🔴 À FAIRE EN PREMIER — le projet Supabase n'existe plus
 
-Rendre `stockage.ts` **enfichable**, avec deux implémentations derrière la même
-interface (`ecrireRapport`, `lireRapport`, `lireManifeste`, `effacerRapport`) :
+```
+nslookup vkfaeyfwxjgfzmsinmoq.supabase.co
+  → Non-existent domain          (alors que supabase.co répond)
 
-- **production** → Supabase Storage, bucket `rapports` (décision du
-  propriétaire, elle annule D-015) ;
-- **tests** → écriture sur disque dans `REPORTS_STORAGE_DIR`.
+Connexion par le pooler
+  → XX000 : tenant/user postgres.vkfaeyfwxjgfzmsinmoq not found
+```
 
-Ce choix préserve une propriété que les tests actuels garantissent et qu'il ne
-faut pas perdre : **le stockage n'est pas simulé, les fichiers sont réellement
-écrits et relus**. Les 22 tests doivent repasser au vert **sans être modifiés**.
-Si l'un d'eux doit changer, c'est que le correctif est mauvais.
+Ce n'est pas un problème de réseau sur le poste, ni de mot de passe : ce serait
+alors un échec d'authentification. Le nom d'hôte du projet a **disparu du DNS**.
 
-Fichiers concernés : `backend/src/reports/stockage.ts`, `backend/src/config.ts`
-(rétablir `REPORTS_STORAGE_DIR`, facultatif hors test).
+**Ce qu'il faut vérifier, dans cet ordre**, sur <https://supabase.com/dashboard> :
+
+1. Le projet est-il **en pause** ? Une offre gratuite met le projet en veille
+   après une semaine sans activité. Il se réveille depuis le tableau de bord.
+2. A-t-il été **supprimé** ? Alors la base et les rapports sont perdus, et il
+   faut repartir d'un projet neuf : les trois migrations de
+   `backend/src/db/migrations/` le reconstruisent, puis `npm run creer-admin`
+   recrée le compte propriétaire.
+3. Dans les deux cas, **relever la nouvelle chaîne de connexion** et la mettre
+   dans `backend/.env`.
+
+**Tant que ce point n'est pas réglé**, rien qui touche la vraie base ne peut
+avancer : ni le renommage du compte, ni la vérification de bout en bout, ni la
+mise en ligne. Le code, lui, est testable sans base — les 655 tests passent.
+
+### En attente de la base
+
+- **Renommer le compte propriétaire en « Abdou Aziz Sy »** (il s'appelle encore
+  « Propriétaire », et ce nom s'imprime sur les rapports remis aux clients).
+  Une fois la base joignable, dans l'éditeur SQL de Supabase :
+
+  ```sql
+  update users set full_name = 'Abdou Aziz Sy', updated_at = now()
+   where email = 'otaziznoblees@gmail.com';
+  ```
 
 ---
 
