@@ -27,7 +27,43 @@ démarrer — ce qui poussait à coller les identifiants de production dans un
 
 ---
 
-## 🔴 À FAIRE EN PREMIER — le projet Supabase n'existe plus
+## ✅ Base rétablie, chaîne vérifiée (2026-08-19)
+
+Le projet Supabase était **en pause**, pas supprimé. Il a été réveillé par le
+propriétaire : les 3 migrations sont intactes, les données aussi.
+
+Le compte propriétaire s'appelle désormais **« Abdou Aziz Sy »** (il portait
+encore « Propriétaire », et ce nom s'imprime sur les rapports remis aux clients
+finaux).
+
+**Vérification de bout en bout contre la vraie base : 25 contrôles, 0 échec.**
+Une seule origine (le serveur sert `/`, `/admin/` et `/api/*`, et une route du
+navigateur retombe bien sur `index.html` tandis que `/api/inconnu` renvoie du
+JSON), session par cookie, moteur de calcul, projet, calcul archivé, **rapport
+PDF réel de 6 821 octets généré puis téléchargé**, isolation entre deux clients,
+suppression.
+
+### 🔴 Ce qui n'est toujours pas vérifié : le stockage de production
+
+La vérification ci-dessus a écrit les PDF **sur disque**, parce que
+`SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` sont absents de `backend/.env`.
+**Le chemin qui tournera réellement en production n'a donc jamais été exécuté.**
+
+Pour lever ce point, dans l'ordre :
+
+1. Créer le bucket **`rapports`** sur Supabase (Storage → New bucket, **privé**).
+2. Renseigner dans `backend/.env` — sans jamais les envoyer dans une
+   conversation ni les committer :
+   ```
+   SUPABASE_URL=https://vkfaeyfwxjgfzmsinmoq.supabase.co
+   SUPABASE_SERVICE_ROLE_KEY=<clé service_role, onglet Project Settings > API>
+   ```
+3. Rejouer la chaîne en forçant le rangement de production :
+   `REPORTS_STORAGE=supabase npm run dev`, puis générer un rapport.
+
+---
+
+## 🗄️ Historique — le projet Supabase avait disparu (résolu)
 
 ```
 nslookup vkfaeyfwxjgfzmsinmoq.supabase.co

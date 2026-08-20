@@ -150,7 +150,7 @@ Reprise de **D-011**, à ne pas rogner :
 - [ ] **Regénérer `JWT_SECRET`** — tout secret ayant existé en prototype est brûlé
 - [x] Écrire le service statique dans Express — fait, couvert par backend/tests/static.routes.test.ts
 - [ ] Recalibrer `trust proxy`, sinon le limiteur de débit voit la même adresse IP pour tout le monde
-- [ ] Renseigner `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` en production
+- [ ] Renseigner SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY — **le chemin Supabase Storage n'a encore JAMAIS été exécuté**
 - [ ] Créer le bucket `rapports` (public ou privé avec politique d'accès) sur Supabase
 - [ ] Activer RLS sur `schema_migrations`
 - [ ] Brancher une supervision gratuite sur `/health` (UptimeRobot ou équivalent)
