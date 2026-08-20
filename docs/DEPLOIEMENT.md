@@ -226,3 +226,46 @@ le dashboard, `/api/inconnu` renvoie du JSON.
   éveillé — et prévient quand il tombe.
 - Le passage à l'offre payante (7 $/mois) supprime la mise en veille sans rien
   changer au code.
+
+---
+
+## Les deux pièges qui font échouer un premier déploiement
+
+### 1. `NODE_ENV=production` fait disparaître les outils de compilation
+
+C'est celui qui a fait échouer le premier essai sur Render.
+
+`NODE_ENV=production` est posé pour l'exécution. Mais l'hébergeur applique la
+même variable **pendant la compilation** — et dans ce cas `npm install` ignore
+purement et simplement les `devDependencies`.
+
+Or **TypeScript et Vite SONT des `devDependencies`** : ce sont des outils de
+compilation, ils n'ont rien à faire dans le paquet livré. La compilation
+s'arrêtait donc sur « tsc: not found » avant d'avoir produit quoi que ce soit.
+
+Mesuré sur ce dépôt : `NODE_ENV=production npm install` **retire 101 paquets**.
+
+`build.sh` utilise donc `npm ci --include=dev`, explicitement. **Ne pas retirer
+ce drapeau « pour alléger »** : c'est toute la compilation qui tombe.
+
+Le script vérifie en outre, à la fin, que les trois artefacts existent
+(`backend/dist/server.js`, `app/dist/index.html`, `admin/dist/index.html`) et
+échoue avec un message clair sinon. Mieux vaut s'arrêter là que démarrer un
+serveur qui répondra 404 sur toutes les pages sans qu'on comprenne pourquoi.
+
+### 2. Le mauvais port dans `DATABASE_URL`
+
+Supabase propose deux chaînes de connexion, et **une seule fonctionne depuis un
+hébergeur** :
+
+| Chaîne | Port | Depuis Render |
+|---|---|---|
+| **Transaction pooler** | **6543** | ✅ la seule qui marche |
+| Direct connection | 5432 | ❌ IPv6 uniquement (D-002b) |
+
+Prendre la chaîne « Direct connection » donne un serveur qui démarre, répond sur
+`/health` en mode dégradé, et refuse toute connexion. Symptôme trompeur : on
+croit à un problème de mot de passe.
+
+La chaîne se relève dans **Project Settings → Database → Connection pooling**,
+mode **Transaction**.
