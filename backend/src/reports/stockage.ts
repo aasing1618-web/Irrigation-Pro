@@ -20,10 +20,10 @@
  * ═══════════════════════════════════════════════════════════════════════════
  *  DEUX RANGEMENTS DERRIÈRE LA MÊME PORTE
  * ═══════════════════════════════════════════════════════════════════════════
- *  - **Supabase Storage**, bucket `rapports` — c'est le rangement de
- *    production, décidé par le propriétaire le 2026-08-11. Il supprime le
- *    besoin d'un disque persistant, donc l'hébergement du serveur redevient
- *    gratuit.
+ *  - **Supabase Storage** — c'est le rangement de production, décidé par le
+ *    propriétaire le 2026-08-11. Il supprime le besoin d'un disque persistant,
+ *    donc l'hébergement du serveur redevient gratuit. Le nom du bucket vient de
+ *    `SUPABASE_BUCKET` et **il est sensible à la casse**.
  *  - **Disque local** — pour les tests et le développement.
  *
  *  ⚠️ **Ce n'est pas un confort, c'est un garde-fou.** Sans lui, lancer la
@@ -63,8 +63,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { logger } from '../logger.js';
 import type { ManifesteRapport } from './types.js';
 
-/** Bucket Supabase où vivent les rapports. */
-const BUCKET = 'rapports';
+/**
+ * Bucket Supabase où vivent les rapports.
+ *
+ * Le nom vient de la configuration (`SUPABASE_BUCKET`) et **il est sensible à
+ * la casse** : « Rapport » et « rapports » désignent deux buckets différents.
+ * C'est le genre d'écart qui ne se voit qu'à la première écriture en
+ * production, sous la forme d'un « Bucket not found » — d'où le message
+ * d'erreur explicite plus bas.
+ */
+let bucketMemo: string | null = null;
 
 /* -------------------------------------------------------------------------- */
 /* Le chemin, commun aux deux rangements                                      */
@@ -191,10 +199,32 @@ async function supabase(): Promise<SupabaseClient> {
     import('../config.js'),
   ]);
 
+  bucketMemo = config.supabaseBucket;
   clientSupabase = createClient(config.supabaseUrl, config.supabaseServiceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
   });
   return clientSupabase;
+}
+
+/** Nom du bucket, une fois la configuration chargée. */
+function bucket(): string {
+  return bucketMemo ?? 'rapports';
+}
+
+/**
+ * Rend lisible l'échec le plus probable et le plus déroutant : un bucket qui
+ * n'existe pas sous ce nom-là. Supabase répond « Bucket not found », ce qui ne
+ * dit pas quel nom a été cherché — or l'écart est presque toujours une
+ * majuscule ou un pluriel.
+ */
+function expliquer(contexte: string, message: string): string {
+  if (/bucket not found/i.test(message)) {
+    return (
+      `${contexte} : aucun bucket nommé « ${bucket()} » sur ce projet Supabase. ` +
+      'Le nom est sensible à la casse — vérifiez SUPABASE_BUCKET.'
+    );
+  }
+  return `${contexte} : ${message}`;
 }
 
 const rangementSupabase: Rangement = {
@@ -204,12 +234,12 @@ const rangementSupabase: Rangement = {
     const client = await supabase();
 
     const { error: erreurPdf } = await client.storage
-      .from(BUCKET)
+      .from(bucket())
       .upload(relatif, pdf, { contentType: 'application/pdf', upsert: true });
-    if (erreurPdf) throw new Error(`Écriture du PDF impossible : ${erreurPdf.message}`);
+    if (erreurPdf) throw new Error(expliquer('Écriture du PDF impossible', erreurPdf.message));
 
     const { error: erreurJson } = await client.storage
-      .from(BUCKET)
+      .from(bucket())
       .upload(versManifeste(relatif), JSON.stringify(manifeste, null, 2), {
         contentType: 'application/json',
         upsert: true,
@@ -227,7 +257,7 @@ const rangementSupabase: Rangement = {
   async lirePdf(relatif) {
     try {
       const client = await supabase();
-      const { data, error } = await client.storage.from(BUCKET).download(relatif);
+      const { data, error } = await client.storage.from(bucket()).download(relatif);
       if (error || !data) return null;
       return Buffer.from(await data.arrayBuffer());
     } catch {
@@ -238,7 +268,7 @@ const rangementSupabase: Rangement = {
   async lireJson(relatif) {
     try {
       const client = await supabase();
-      const { data, error } = await client.storage.from(BUCKET).download(versManifeste(relatif));
+      const { data, error } = await client.storage.from(bucket()).download(versManifeste(relatif));
       if (error || !data) return null;
       return await data.text();
     } catch {
@@ -248,7 +278,7 @@ const rangementSupabase: Rangement = {
 
   async effacer(relatif) {
     const client = await supabase();
-    await client.storage.from(BUCKET).remove([relatif, versManifeste(relatif)]);
+    await client.storage.from(bucket()).remove([relatif, versManifeste(relatif)]);
   },
 };
 

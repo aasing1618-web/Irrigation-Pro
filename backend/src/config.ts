@@ -134,6 +134,14 @@ const schémaEnvironnement = z.object({
   SUPABASE_SERVICE_ROLE_KEY: estProduction
     ? z.string({ required_error: 'variable obligatoire' }).min(1)
     : z.string().default('cle-absente-hors-production'),
+
+  // Nom du bucket Supabase, sensible à la casse.
+  //
+  // Configurable parce qu'un bucket ne se renomme pas : celui qui existe
+  // s'appelle « Rapport », et le jour où l'on créera un projet Supabase séparé
+  // pour les tests (D-011), son bucket ne portera pas forcément le même nom.
+  // Un nom en dur ici obligerait à recréer un bucket à chaque divergence.
+  SUPABASE_BUCKET: z.string().min(1).default('rapports'),
 });
 
 const résultat = schémaEnvironnement
@@ -203,6 +211,7 @@ export const config: {
   whatsappNumber: string;
   supabaseUrl: string;
   supabaseServiceRoleKey: string;
+  supabaseBucket: string;
   isProduction: boolean;
 } = Object.freeze({
   nodeEnv,
@@ -218,5 +227,6 @@ export const config: {
   whatsappNumber: env.WHATSAPP_NUMBER,
   supabaseUrl: env.SUPABASE_URL,
   supabaseServiceRoleKey: env.SUPABASE_SERVICE_ROLE_KEY,
+  supabaseBucket: env.SUPABASE_BUCKET,
   isProduction: estProduction,
 });

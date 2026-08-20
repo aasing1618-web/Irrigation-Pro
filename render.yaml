@@ -59,6 +59,13 @@ services:
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
 
+      # Nom EXACT du bucket, majuscules comprises. Celui qui existe sur le
+      # projet s'appelle « Rapport », au singulier et avec une capitale.
+      # Supabase répondrait « Bucket not found » à la moindre différence, et
+      # cela ne se verrait qu'à la première génération de rapport.
+      - key: SUPABASE_BUCKET
+        value: "Rapport"
+
       # Render tire une valeur aléatoire à la création du service, et personne
       # ne la voit jamais passer. C'est mieux qu'un secret choisi à la main :
       # tout secret ayant existé ailleurs qu'ici est déjà brûlé.

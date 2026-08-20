@@ -147,11 +147,11 @@ Le site vitrine, à la compilation : `VITE_WHATSAPP_NUMBER=221778608247`.
 Reprise de **D-011**, à ne pas rogner :
 
 - [ ] **Réinitialiser le mot de passe de la base Supabase** — l'actuel a transité en clair dans une sortie de terminal
-- [ ] **Regénérer `JWT_SECRET`** — tout secret ayant existé en prototype est brûlé
+- [x] JWT_SECRET : tiré au sort par Render (generateValue), personne ne le voit passer
 - [x] Écrire le service statique dans Express — fait, couvert par backend/tests/static.routes.test.ts
-- [ ] Recalibrer `trust proxy`, sinon le limiteur de débit voit la même adresse IP pour tout le monde
-- [ ] Renseigner SUPABASE_URL et SUPABASE_SERVICE_ROLE_KEY — **le chemin Supabase Storage n'a encore JAMAIS été exécuté**
-- [ ] Créer le bucket `rapports` (public ou privé avec politique d'accès) sur Supabase
+- [x] trust proxy : déjà réglé à 1 en production, ce qui convient à Render
+- [x] SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY et SUPABASE_BUCKET renseignés en local ; à reporter chez l'hébergeur
+- [x] Bucket Supabase créé (« Rapport », privé) et **écriture réelle vérifiée** : 8 contrôles, 0 échec
 - [ ] Activer RLS sur `schema_migrations`
 - [ ] Brancher une supervision gratuite sur `/health` (UptimeRobot ou équivalent)
 - [ ] **Essayer la chaîne complète dans un navigateur** : connexion, F5, fermeture de l'onglet, retour le lendemain
