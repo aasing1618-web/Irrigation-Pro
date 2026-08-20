@@ -179,3 +179,50 @@ un projet Supabase séparé pour les tests ; tant qu'il n'existe pas, ce
 commutateur est la seule protection.
 
 En production, il n'y a **rien à régler** : `NODE_ENV=production` suffit.
+
+---
+
+## Render, pas à pas (offre gratuite)
+
+`render.yaml` est prêt et vérifié. Le serveur compilé a été démarré localement
+en `NODE_ENV=production` : `/health` répond 200, `/` sert le logiciel, `/admin/`
+le dashboard, `/api/inconnu` renvoie du JSON.
+
+### Avant de cliquer
+
+1. **Bucket Supabase.** Storage → New bucket → nom exact `rapports` → **privé**.
+2. **Relever la clé secrète.** Project Settings → API Keys → `sb_secret_…`
+   (anciennement `service_role`). ⚠️ **Pas** la clé `sb_publishable_…` : celle-là
+   est publique, soumise aux règles RLS, et toutes les tables sont verrouillées.
+   Elle ne pourrait rien écrire.
+3. **Relever la chaîne du pooler.** Project Settings → Database → Connection
+   pooling, **port 6543**. Le 5432 n'est joignable qu'en IPv6 (D-002b).
+
+### Le déploiement
+
+1. Render → New → Blueprint → choisir le dépôt `Irrigation-Pro`.
+   Render lit `render.yaml` et propose le service.
+2. Il demande les trois valeurs marquées `sync: false` :
+   `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`.
+   `JWT_SECRET` est tiré au sort par Render, personne ne le voit passer.
+3. Déployer. La première compilation installe et construit les trois interfaces.
+
+### Après le premier déploiement
+
+- **Vérifier l'adresse attribuée.** Si ce n'est pas
+  `irrigation-pro.onrender.com`, corriger `CORS_ORIGINS` dans le tableau de bord.
+- **Essayer la chaîne complète dans un navigateur** : connexion, **F5**,
+  fermeture de l'onglet, retour. C'est là, et nulle part avant, qu'un problème
+  de cookie se manifeste.
+- **Générer un vrai rapport** : c'est le seul moyen de savoir que Supabase
+  Storage fonctionne. Rien avant ne le prouve.
+
+### Ce que l'offre gratuite implique, et qu'il faut savoir
+
+- **Le service s'endort après 15 minutes sans visite.** Le réveil prend environ
+  50 secondes : le premier client de la journée attendra devant un écran de
+  chargement. Acceptable pour essayer, pas pour vendre.
+- Une supervision qui appelle `/health` toutes les 10 minutes garde le service
+  éveillé — et prévient quand il tombe.
+- Le passage à l'offre payante (7 $/mois) supprime la mise en veille sans rien
+  changer au code.

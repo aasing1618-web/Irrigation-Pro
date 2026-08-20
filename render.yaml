@@ -1,23 +1,84 @@
+# Déploiement Render — Irrigation Pro
+#
+# Topologie : UNE SEULE ORIGINE (décision D-014). Ce service unique sert
+# l'API sous /api/*, le logiciel client sous / et le dashboard sous /admin/*.
+# C'est ce qui permet de se passer d'un nom de domaine : le cookie de session
+# est SameSite=Strict, il ne circulerait pas entre deux hébergeurs différents.
+#
+# Le site vitrine n'est PAS ici : il est purement statique, sans cookie ni
+# secret, et va où l'on veut (Vercel, Netlify, Cloudflare Pages).
+#
+# Les PDF vont sur Supabase Storage, donc ce service n'a besoin d'aucun disque
+# persistant : l'offre gratuite suffit.
+
 services:
   - type: web
     name: irrigation-pro
-    env: node
+    runtime: node
+    plan: free
+
+    # Francfort : c'est le plus proche de la base Supabase, hébergée en
+    # eu-west-1. Chaque requête fait l'aller-retour, la latence compte.
+    region: frankfurt
+
     buildCommand: ./build.sh
     startCommand: cd backend && npm start
+
+    # Render interroge cette route pour savoir si le service est vivant.
+    # Elle répond 503 quand la base ne répond plus : un déploiement cassé est
+    # alors visible tout de suite, au lieu d'être découvert par un client.
+    healthCheckPath: /health
+
     envVars:
       - key: NODE_ENV
         value: production
+
+      - key: NODE_VERSION
+        value: "22"
+
+      # Render écoute ce port. Ne pas le changer.
       - key: PORT
         value: 10000
+
+      # ---------------------------------------------------------------------
+      # Secrets — à saisir dans le tableau de bord Render, jamais ici.
+      # `sync: false` veut dire « Render me demandera la valeur ».
+      # ---------------------------------------------------------------------
+
+      # Chaîne du pooler Supabase, port 6543. Le port 5432 ne conviendrait pas :
+      # il n'est joignable qu'en IPv6 (décision D-002b).
       - key: DATABASE_URL
         sync: false
+
       - key: SUPABASE_URL
         sync: false
+
+      # La clé SECRÈTE (sb_secret_… / service_role), pas la clé publiable.
+      # La clé publiable est soumise aux règles RLS, et toutes les tables sont
+      # verrouillées : elle ne pourrait rien écrire dans le bucket.
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
+
+      # Render tire une valeur aléatoire à la création du service, et personne
+      # ne la voit jamais passer. C'est mieux qu'un secret choisi à la main :
+      # tout secret ayant existé ailleurs qu'ici est déjà brûlé.
+      - key: JWT_SECRET
+        generateValue: true
+
+      # ---------------------------------------------------------------------
+      # Réglages sans secret
+      # ---------------------------------------------------------------------
+
+      # En origine unique, le navigateur n'émet aucune requête inter-origines :
+      # cette liste ne sert donc à rien en pratique. Elle reste renseignée
+      # parce que le serveur refuse de démarrer en production sans elle, et
+      # parce qu'une liste vide ou « * » serait un mauvais exemple à recopier.
+      # À corriger si Render attribue une autre adresse que celle-ci.
+      - key: CORS_ORIGINS
+        value: "https://irrigation-pro.onrender.com"
+
       - key: WHATSAPP_NUMBER
         value: "221778608247"
+
       - key: REFRESH_TOKEN_TTL_DAYS
         value: "30"
-      - key: CORS_ORIGINS
-        value: "*"
