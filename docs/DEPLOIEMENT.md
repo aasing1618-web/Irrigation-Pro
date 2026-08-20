@@ -152,7 +152,7 @@ Reprise de **D-011**, à ne pas rogner :
 - [x] trust proxy : déjà réglé à 1 en production, ce qui convient à Render
 - [x] SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY et SUPABASE_BUCKET renseignés en local ; à reporter chez l'hébergeur
 - [x] Bucket Supabase créé (« Rapport », privé) et **écriture réelle vérifiée** : 8 contrôles, 0 échec
-- [ ] Activer RLS sur `schema_migrations`
+- [x] RLS sur schema_migrations — migration 004 appliquée, les 8 tables sont verrouillées
 - [ ] Brancher une supervision gratuite sur `/health` (UptimeRobot ou équivalent)
 - [ ] **Essayer la chaîne complète dans un navigateur** : connexion, F5, fermeture de l'onglet, retour le lendemain
 
