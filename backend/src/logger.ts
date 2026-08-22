@@ -35,6 +35,10 @@ const CHAMPS_SENSIBLES = [
   'accessToken',
   'password_hash',
   'refresh_token_hash',
+  'jwtSecret',
+  'secret',
+  'supabaseServiceRoleKey',
+  'serviceRoleKey',
 ] as const;
 
 const CHEMINS_MASQUÉS: string[] = [
