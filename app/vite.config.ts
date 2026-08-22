@@ -60,7 +60,7 @@ function versionManifestPlugin(version: string): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: './',
+  base: '/',
   plugins: [react(), tailwindcss(), versionManifestPlugin(pkg.version)],
 
   resolve: {
