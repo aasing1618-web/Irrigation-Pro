@@ -13,6 +13,7 @@ const pkg = JSON.parse(
 ) as { version: string };
 
 export default defineConfig({
+  base: '/admin/',
   plugins: [react(), tailwindcss()],
 
   resolve: {
