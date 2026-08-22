@@ -60,5 +60,17 @@ describe('Routage statique et API', () => {
     expect(reponse.headers['content-type']).toMatch(/html/);
     expect(reponse.text).toContain('<html');
   });
+
+  it("autorise CORS pour la même origine que le hôte du serveur", async () => {
+    const app = createApp();
+
+    const reponse = await supertest(app)
+      .get('/')
+      .set('Host', 'irrigation-pro-yn5z.onrender.com')
+      .set('Origin', 'https://irrigation-pro-yn5z.onrender.com')
+      .expect(200);
+
+    expect(reponse.headers['access-control-allow-origin']).toBe('https://irrigation-pro-yn5z.onrender.com');
+  });
 });
 

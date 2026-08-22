@@ -110,12 +110,31 @@ export function createApp(): Express {
   // serveur) en serait dépourvue et pourrait être resservie par un cache
   // intermédiaire à un navigateur d'une autre origine. Le paquet `vary`
   // déduplique, la pose par `cors` juste après est donc sans effet de bord.
-  app.use((_req, res, next) => {
+  app.use((req, res, next) => {
     res.vary('Origin');
-    next();
-  });
 
-  app.use(cors(optionsCors));
+    const origine = req.headers.origin;
+    const host = req.headers.host;
+    const estMemeOrigine = Boolean(
+      origine && host && (origine === `https://${host}` || origine === `http://${host}`),
+    );
+
+    const origineAutorisee =
+      !origine || estMemeOrigine || config.corsOrigins.includes(origine);
+
+    if (origineAutorisee) {
+      cors({
+        origin: origine ? (estMemeOrigine || config.corsOrigins.includes(origine) ? origine : false) : false,
+        credentials: true,
+        methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        exposedHeaders: ['X-Request-Id'],
+        maxAge: 86_400,
+      })(req, res, next);
+    } else {
+      next(forbidden('Origine non autorisée.'));
+    }
+  });
 
   app.use(express.json({ limit: LIMITE_CORPS_JSON }));
 
