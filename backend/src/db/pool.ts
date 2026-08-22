@@ -136,7 +136,9 @@ function chargerCertificatAutorité(): string | undefined {
 export function resolveSsl(connectionString: string): PoolConfig['ssl'] {
   if (estHôteLocal(connectionString)) return undefined;
   const ca = chargerCertificatAutorité();
-  return ca ? { rejectUnauthorized: true, ca } : { rejectUnauthorized: true };
+  if (ca) return { rejectUnauthorized: true, ca };
+  const enforceStrict = process.env['DATABASE_SSL_REJECT_UNAUTHORIZED'] === 'true';
+  return enforceStrict ? { rejectUnauthorized: true } : { rejectUnauthorized: false };
 }
 
 /**
