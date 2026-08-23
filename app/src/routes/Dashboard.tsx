@@ -10,7 +10,6 @@ import { useNavigate } from 'react-router';
 
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
-import { PageHeader } from '../components/PageHeader';
 import { StatusBadge, type StatusTone } from '../components/StatusBadge';
 import { Button } from '../components/Button';
 import { CalculationsIcon, ProjectsIcon, RetryIcon, ServerIcon } from '../components/icons';
@@ -27,10 +26,78 @@ export function Dashboard({ connection, onRefresh, isRefreshing }: DashboardProp
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-7">
-      <PageHeader
-        title="Tableau de bord"
-        description="Votre point de départ : l’état du service et vos projets les plus récents."
-      />
+      {/* Hero Banner Immersif avec Photo d'Ingénierie */}
+      <div className="relative mb-8 overflow-hidden rounded-2xl border border-white/10 bg-brand-950 shadow-overlay">
+        <img
+          src="/photos/fraisier-aspersion.jpg"
+          alt="Irrigation par aspersion"
+          className="pointer-events-none absolute inset-0 size-full object-cover opacity-35"
+        />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-950 via-brand-950/80 to-transparent" />
+        
+        <div className="relative p-7 sm:p-9">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/20 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-brand-300 backdrop-blur-md border border-brand-400/20">
+              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Plateforme d'Ingénierie
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-2xs font-medium text-brand-200 backdrop-blur-md">
+              14 Modules Certifiés
+            </span>
+          </div>
+
+          <h1 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+            Tableau de bord
+          </h1>
+          <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-brand-200/90 sm:text-base">
+            Conçu pour les ingénieurs agronomes, hydrauliciens et bureaux d'études. Pilotez vos chantiers d'irrigation et générez vos notes de calcul professionnelles.
+          </p>
+
+          <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Button variant="primary" size="md" onClick={() => void navigate('/projets')}>
+              <ProjectsIcon /> Ouvrir mes projets
+            </Button>
+            <Button variant="secondary" size="md" className="border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={() => void navigate('/calculs')}>
+              <CalculationsIcon /> Explorer les 14 modules
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Galerie des Grandes Familles de Dimensionnement (Cartes Photo) */}
+      <section className="mb-8">
+        <h2 className="mb-4 text-lg font-semibold text-ink-900 flex items-center justify-between">
+          <span>Domaines d'application & Calculs</span>
+          <span className="text-xs font-normal text-ink-500">14 modules prêts à l'emploi</span>
+        </h2>
+        
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <ModuleCategoryCard
+            title="Besoins en eau FAO 56"
+            subtitle="Evapotranspiration ET0, KC & Bilan"
+            photo="/photos/champ-mais.jpg"
+            onClick={() => void navigate('/calculs')}
+          />
+          <ModuleCategoryCard
+            title="Hydraulique des Canaux"
+            subtitle="Manning-Strickler & Écoulement"
+            photo="/photos/rizicoles-irrigation.jpg"
+            onClick={() => void navigate('/calculs')}
+          />
+          <ModuleCategoryCard
+            title="Réseaux sous pression"
+            subtitle="Goutte-à-goutte & Aspersion"
+            photo="/photos/aspersion-moderne.jpg"
+            onClick={() => void navigate('/calculs')}
+          />
+          <ModuleCategoryCard
+            title="Pompage & Énergie Solaire"
+            subtitle="HMT, Puissance & Solaires"
+            photo="/photos/pompage-solaire.jpg"
+            onClick={() => void navigate('/calculs')}
+          />
+        </div>
+      </section>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <div className="flex flex-col gap-5">
@@ -47,18 +114,25 @@ export function Dashboard({ connection, onRefresh, isRefreshing }: DashboardProp
             />
           </Card>
 
-          <Card title="Modules de calcul" flush>
-            <EmptyState
-              icon={<CalculationsIcon />}
-              title="Dimensionnez sans quitter le logiciel"
-              description="Besoins en eau, hydraulique des canaux, conduites : les calculs sont réalisés par le serveur et leurs avertissements vous sont signalés."
-              className="py-10"
-              action={
-                <Button variant="secondary" size="sm" onClick={() => void navigate('/calculs')}>
-                  Voir les modules
-                </Button>
-              }
-            />
+          {/* Bandeau Photo Galerie de Terrain */}
+          <Card title="Galerie de terrain & Équipements" className="overflow-hidden">
+            <div className="grid grid-cols-3 gap-2">
+              <div className="group relative h-28 overflow-hidden rounded-lg">
+                <img src="/photos/goutte-a-goutte.jpg" alt="Goutte-à-goutte" className="size-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-brand-950/80 via-transparent to-transparent" />
+                <span className="absolute bottom-2 left-2 text-2xs font-medium text-white">Goutte-à-goutte</span>
+              </div>
+              <div className="group relative h-28 overflow-hidden rounded-lg">
+                <img src="/photos/bassin-stockage.jpg" alt="Bassin de stockage" className="size-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-brand-950/80 via-transparent to-transparent" />
+                <span className="absolute bottom-2 left-2 text-2xs font-medium text-white">Bassin de stockage</span>
+              </div>
+              <div className="group relative h-28 overflow-hidden rounded-lg">
+                <img src="/photos/outils-maraichage.jpg" alt="Outils maraîchage" className="size-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-brand-950/80 via-transparent to-transparent" />
+                <span className="absolute bottom-2 left-2 text-2xs font-medium text-white">Maraîchage pro</span>
+              </div>
+            </div>
           </Card>
         </div>
 
@@ -69,6 +143,37 @@ export function Dashboard({ connection, onRefresh, isRefreshing }: DashboardProp
         />
       </div>
     </div>
+  );
+}
+
+function ModuleCategoryCard({
+  title,
+  subtitle,
+  photo,
+  onClick,
+}: {
+  title: string;
+  subtitle: string;
+  photo: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="group relative flex h-36 flex-col justify-end overflow-hidden rounded-xl border border-ink-200/80 bg-brand-950 p-4 text-left shadow-subtle transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-500 hover:shadow-raised"
+    >
+      <img
+        src={photo}
+        alt={title}
+        className="pointer-events-none absolute inset-0 size-full object-cover opacity-40 transition-transform duration-500 group-hover:scale-110 group-hover:opacity-50"
+      />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-950 via-brand-950/50 to-transparent" />
+      <div className="relative">
+        <h3 className="text-sm font-semibold text-white group-hover:text-brand-300 transition-colors">{title}</h3>
+        <p className="mt-0.5 text-2xs text-brand-200/80 line-clamp-1">{subtitle}</p>
+      </div>
+    </button>
   );
 }
 

@@ -15,7 +15,6 @@ import { useNavigate } from 'react-router';
 import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
-import { PageHeader } from '../components/PageHeader';
 import { ProjectsIcon, ReportsIcon } from '../components/icons';
 
 export function Reports() {
@@ -23,10 +22,26 @@ export function Reports() {
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-7">
-      <PageHeader
-        title="Rapports"
-        description="Les documents PDF que vous remettez à vos clients, reprenant les informations du projet, les hypothèses retenues et les résultats de vos calculs."
-      />
+      {/* En-tête illustré Rapports */}
+      <div className="relative mb-7 overflow-hidden rounded-2xl border border-ink-200/80 bg-brand-950 p-6 shadow-raised">
+        <img
+          src="/photos/nature-apaisante.jpg"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 size-full object-cover opacity-25"
+        />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-950 via-brand-950/90 to-transparent" />
+        <div className="relative">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/20 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-brand-300 backdrop-blur-md border border-brand-400/20">
+            Dossiers d'Ingénierie PDF
+          </span>
+          <h1 className="mt-2 text-2xl font-bold text-white">Rapports & Documents PDF</h1>
+          <p className="mt-1 max-w-[64ch] text-sm text-brand-200/90">
+            Notes de calcul officielles et estampillées. Présentez des dossiers irréprochables à vos clients finaux et aux bailleurs de fonds.
+          </p>
+        </div>
+      </div>
+
       <Card flush>
         <EmptyState
           icon={<ReportsIcon />}

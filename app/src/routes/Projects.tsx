@@ -24,7 +24,6 @@ import { Button } from '../components/Button';
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
 import { SelectField, TextField } from '../components/Field';
-import { PageHeader } from '../components/PageHeader';
 import { ProjectFormDialog } from '../components/ProjectDialogs';
 import { LoadingRows, QueryError } from '../components/QueryStates';
 import { StatusBadge, type StatusTone } from '../components/StatusBadge';
@@ -101,15 +100,30 @@ export function Projects() {
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-7">
-      <PageHeader
-        title="Projets"
-        description="Chaque chantier, chaque périmètre irrigué a son projet : ses données, ses calculs et ses rapports au même endroit."
-        action={
-          <Button variant="primary" icon={<PlusIcon />} onClick={() => setCreating(true)}>
+      {/* En-tête illustré Projets */}
+      <div className="relative mb-7 overflow-hidden rounded-2xl border border-ink-200/80 bg-brand-950 p-6 shadow-raised">
+        <img
+          src="/photos/rizicoles-irrigation.jpg"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 size-full object-cover opacity-25"
+        />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-950 via-brand-950/90 to-transparent" />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/20 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-brand-300 backdrop-blur-md border border-brand-400/20">
+              Gestion de Chantiers
+            </span>
+            <h1 className="mt-2 text-2xl font-bold text-white">Vos Projets d'Irrigation</h1>
+            <p className="mt-1 max-w-[64ch] text-sm text-brand-200/90">
+              Regroupez les périmètres irrigués, conservez vos jeux de données terrain et générez les dossiers complets pour vos clients.
+            </p>
+          </div>
+          <Button variant="primary" size="md" icon={<PlusIcon />} onClick={() => setCreating(true)}>
             Nouveau projet
           </Button>
-        }
-      />
+        </div>
+      </div>
 
       <div className="mb-5 grid gap-4 sm:grid-cols-[minmax(0,1fr)_11rem_11rem]">
         <TextField

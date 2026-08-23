@@ -8,7 +8,7 @@
  * fait qu'un lancement de logiciel paraît continu plutôt que saccadé.
  */
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import { APP_VERSION } from '../lib/version';
 import { BrandMark } from './icons';
@@ -25,41 +25,48 @@ const widths = {
   md: 'max-w-[30rem]',
 };
 
+const BACKGROUND_PHOTOS = [
+  { src: '/photos/fraisier-aspersion.jpg', legend: 'Irrigation par aspersion' },
+  { src: '/photos/aspersion-moderne.jpg', legend: 'Systèmes de couverture intégrale' },
+  { src: '/photos/champ-mais.jpg', legend: 'Grandes cultures & Besoins agronomiques' },
+  { src: '/photos/rizicoles-irrigation.jpg', legend: 'Hydraulique des canaux et grands périmètres' },
+  { src: '/photos/pompage-solaire.jpg', legend: 'Pompage hydraulique & Énergie solaire' },
+];
+
 export function BrandBackdrop({ children, width = 'md', className }: BrandBackdropProps) {
+  const [photoIndex, setPhotoIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPhotoIndex((prev) => (prev + 1) % BACKGROUND_PHOTOS.length);
+    }, 7000);
+    return () => clearInterval(timer);
+  }, []);
+
   return (
     <div
       data-surface="dark"
       className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-brand-950 px-6 py-10"
     >
-      {/* La scène du produit : pompage vers un canal en terre.
-          C'est la même image que l'ouverture du site vitrine, et ce n'est pas
-          un hasard — le client qui a découvert Irrigation Pro sur le web
-          retrouve exactement ce qu'il a vu au moment de se connecter.
+      {/* Diaporama photo en fond immersif */}
+      {BACKGROUND_PHOTOS.map((photo, idx) => (
+        <img
+          key={photo.src}
+          src={photo.src}
+          alt=""
+          aria-hidden="true"
+          decoding="async"
+          className={cn(
+            'pointer-events-none absolute inset-0 size-full object-cover transition-opacity duration-1000 ease-in-out',
+            idx === photoIndex ? 'opacity-[0.22] scale-105 transition-transform duration-[8000ms]' : 'opacity-0 scale-100',
+          )}
+        />
+      ))}
 
-          Très voilée, pour deux raisons. D'abord parce que ces écrans sont des
-          écrans de travail : ce sont les champs de saisie qui doivent attirer
-          l'œil, pas le décor. Ensuite parce que le fichier fait 736 px de
-          large — nette et plein cadre, la photo serait floue sur un grand
-          écran. Voilée, sa douceur devient une texture. */}
-      <img
-        src="/photos/canal-pompage.jpg"
-        alt=""
-        aria-hidden="true"
-        width={736}
-        height={414}
-        decoding="async"
-        className="pointer-events-none absolute inset-0 size-full object-cover opacity-[0.13]"
-      />
-
-      {/* Voile de lisibilité : sans lui, le ciel clair de la photo passerait
-          sous le texte blanc et le contraste tomberait sous le seuil lisible. */}
+      {/* Voile de lisibilité & dégradé radial de marque */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            'linear-gradient(to bottom, var(--color-brand-950) 0%, transparent 40%, var(--color-brand-950) 100%)',
-        }}
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand-950/90 via-brand-950/70 to-brand-950/95"
       />
 
       {/* Halo unique et sourd derrière la marque : donne de la profondeur à un

@@ -15,7 +15,6 @@ import { useNavigate } from 'react-router';
 
 import { Card } from '../components/Card';
 import { EmptyState } from '../components/EmptyState';
-import { PageHeader } from '../components/PageHeader';
 import { LoadingRows, QueryError } from '../components/QueryStates';
 import { CalculationsIcon, ChevronRightIcon } from '../components/icons';
 import { useCalculModules } from '../hooks/useCalculs';
@@ -34,6 +33,15 @@ function byFamily(modules: CalculModule[]): Array<{ famille: string; modules: Ca
   return groups;
 }
 
+function getFamilyPhoto(famille: string): string {
+  const f = famille.toLowerCase();
+  if (f.includes('agron') || f.includes('besoin') || f.includes('climat')) return '/photos/champ-mais.jpg';
+  if (f.includes('canal') || f.includes('éco') || f.includes('libre')) return '/photos/rizicoles-irrigation.jpg';
+  if (f.includes('réseau') || f.includes('goutte') || f.includes('aspersion')) return '/photos/aspersion-moderne.jpg';
+  if (f.includes('pomp') || f.includes('énerg') || f.includes('solair')) return '/photos/pompage-solaire.jpg';
+  return '/photos/bassin-stockage.jpg';
+}
+
 export function Calculations() {
   const navigate = useNavigate();
   const query = useCalculModules();
@@ -41,10 +49,25 @@ export function Calculations() {
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-7">
-      <PageHeader
-        title="Calculs"
-        description="Les modules de dimensionnement mis à disposition par le serveur Irrigation Pro. Lancez un essai ici, ou ouvrez un projet pour archiver vos résultats."
-      />
+      {/* En-tête illustré */}
+      <div className="relative mb-7 overflow-hidden rounded-2xl border border-ink-200/80 bg-brand-950 p-6 shadow-raised">
+        <img
+          src="/photos/outils-maraichage.jpg"
+          alt=""
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 size-full object-cover opacity-25"
+        />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-950 via-brand-950/90 to-transparent" />
+        <div className="relative">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/20 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-brand-300 backdrop-blur-md border border-brand-400/20">
+            14 Modules Embarqués
+          </span>
+          <h1 className="mt-2 text-2xl font-bold text-white">Catalogue des Calculs</h1>
+          <p className="mt-1 max-w-[64ch] text-sm text-brand-200/90">
+            Modules de dimensionnement rigoureux. Lancez un essai libre ici, ou ouvrez un projet pour conserver et exporter vos résultats en PDF.
+          </p>
+        </div>
+      </div>
 
       {query.isPending ? (
         <Card flush>
@@ -68,51 +91,66 @@ export function Calculations() {
           />
         </Card>
       ) : (
-        <div className="flex flex-col gap-5">
-          {groups.map((group) => (
-            <Card key={group.famille} title={group.famille} flush>
-              <ul className="flex flex-col">
-                {group.modules.map((module, index) => (
-                  <li key={module.code}>
-                    <button
-                      type="button"
-                      onClick={() => void navigate(`/calculs/${module.code}`)}
-                      className={cn(
-                        'group flex w-full items-start gap-3.5 px-5 py-4 text-left',
-                        'transition-colors duration-150 ease-out-quart hover:bg-ink-50',
-                        index > 0 && 'border-t border-ink-100',
-                      )}
-                    >
-                      <span aria-hidden="true" className="mt-0.5 text-[1.25rem] text-brand-600">
-                        <CalculationsIcon />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-md font-medium text-ink-900">
-                          {module.nom}
-                        </span>
-                        {module.description && (
-                          <span className="mt-1 block max-w-[68ch] text-sm leading-relaxed text-ink-500">
-                            {module.description}
-                          </span>
+        <div className="flex flex-col gap-6">
+          {groups.map((group) => {
+            const photo = getFamilyPhoto(group.famille);
+            return (
+              <Card key={group.famille} className="overflow-hidden" flush>
+                {/* En-tête de famille de calculs avec image */}
+                <div className="relative h-20 overflow-hidden border-b border-ink-100 bg-brand-950 px-5 py-4 flex items-center justify-between">
+                  <img src={photo} alt="" aria-hidden="true" className="pointer-events-none absolute inset-0 size-full object-cover opacity-35" />
+                  <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-950 via-brand-950/85 to-transparent" />
+                  <div className="relative">
+                    <h2 className="text-md font-semibold text-white">{group.famille}</h2>
+                    <p className="text-2xs text-brand-300 font-medium">
+                      {group.modules.length} {group.modules.length === 1 ? 'module certifié' : 'modules certifiés'}
+                    </p>
+                  </div>
+                </div>
+
+                <ul className="flex flex-col">
+                  {group.modules.map((module, index) => (
+                    <li key={module.code}>
+                      <button
+                        type="button"
+                        onClick={() => void navigate(`/calculs/${module.code}`)}
+                        className={cn(
+                          'group flex w-full items-start gap-3.5 px-5 py-4 text-left',
+                          'transition-colors duration-150 ease-out-quart hover:bg-ink-50',
+                          index > 0 && 'border-t border-ink-100',
                         )}
-                        <span className="mt-1.5 block text-xs text-ink-400">
-                          {module.entrees.length === 1
-                            ? '1 paramètre de saisie'
-                            : `${module.entrees.length} paramètres de saisie`}
-                        </span>
-                      </span>
-                      <span
-                        aria-hidden="true"
-                        className="mt-1 text-[1.125rem] text-ink-300 transition-colors duration-150 group-hover:text-ink-500"
                       >
-                        <ChevronRightIcon />
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ))}
+                        <span aria-hidden="true" className="mt-0.5 text-[1.25rem] text-brand-600 transition-transform duration-150 group-hover:scale-110">
+                          <CalculationsIcon />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-md font-semibold text-ink-900 group-hover:text-brand-700 transition-colors">
+                            {module.nom}
+                          </span>
+                          {module.description && (
+                            <span className="mt-1 block max-w-[68ch] text-sm leading-relaxed text-ink-600">
+                              {module.description}
+                            </span>
+                          )}
+                          <span className="mt-1.5 inline-flex items-center gap-1 text-2xs font-medium text-brand-600 bg-brand-50 px-2 py-0.5 rounded border border-brand-100">
+                            {module.entrees.length === 1
+                              ? '1 paramètre de saisie'
+                              : `${module.entrees.length} paramètres de saisie`}
+                          </span>
+                        </span>
+                        <span
+                          aria-hidden="true"
+                          className="mt-1 text-[1.125rem] text-ink-300 transition-all duration-150 group-hover:translate-x-0.5 group-hover:text-brand-600"
+                        >
+                          <ChevronRightIcon />
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>
