@@ -22,7 +22,6 @@ import { useNavigate } from 'react-router';
 
 import { Card } from '../components/Card';
 import { JournalActivite } from '../components/JournalActivite';
-import { PageHeader } from '../components/PageHeader';
 import { LoadingRows, QueryError } from '../components/QueryStates';
 import { Button } from '../components/Button';
 import { UsersIcon } from '../components/icons';
@@ -45,21 +44,50 @@ export function Accueil() {
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-7">
-      <PageHeader
-        title="Accueil"
-        description="L’état de vos comptes clients et ce qui s’est passé récemment."
-        action={
-          <Button
-            variant="primary"
-            icon={<UsersIcon />}
-            onClick={() => void navigate('/comptes')}
-          >
-            Gérer les comptes
-          </Button>
-        }
-      />
+      {/* Hero Banner Administration avec Photo d'Ingénierie */}
+      <div className="relative mb-8 overflow-hidden rounded-2xl border border-emerald-500/20 bg-emerald-950 shadow-overlay">
+        <img
+          src="/photos/bassin-stockage.jpg"
+          alt="Bassin de stockage"
+          className="pointer-events-none absolute inset-0 size-full object-cover filter brightness-110 contrast-105 opacity-60"
+        />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-emerald-950/90 via-emerald-950/70 to-transparent" />
 
-      <div className="mb-5 grid gap-4 sm:grid-cols-3">
+        <div className="relative p-7 sm:p-9">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/30 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-emerald-200 backdrop-blur-md border border-emerald-400/30 shadow-sm">
+              <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              Espace Administrateur
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-2xs font-medium text-white backdrop-blur-md border border-white/20">
+              Supervision Système & Licences
+            </span>
+          </div>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl drop-shadow-md">
+                Accueil
+              </h1>
+              <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-emerald-100/90 sm:text-base drop-shadow">
+                Suivez l'activité de vos clients, activez ou suspendez les accès en temps réel et contrôlez la sécurité globale.
+              </p>
+            </div>
+
+            <Button
+              variant="primary"
+              size="md"
+              icon={<UsersIcon />}
+              onClick={() => void navigate('/comptes')}
+              className="shadow-lg shadow-emerald-900/40"
+            >
+              Gérer les comptes
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-6 grid gap-4 sm:grid-cols-3">
         <Chiffre
           libelle="Comptes actifs"
           valeur={stats ? formatCount(stats.comptesActifs) : null}
@@ -122,22 +150,22 @@ function Chiffre({
   note?: string;
 }) {
   return (
-    <div className="rounded-lg border border-ink-100 bg-surface p-4 shadow-subtle">
+    <div className="rounded-xl border border-ink-200/80 bg-surface p-5 shadow-subtle transition-all duration-200 hover:-translate-y-0.5 hover:shadow-raised hover:border-emerald-500/30">
       <p className="text-2xs font-semibold uppercase tracking-[0.09em] text-ink-500">
         {libelle}
       </p>
       <p
         data-numeric
         className={cn(
-          'mt-2 text-2xl font-semibold tabular-nums',
-          ton === 'success' && 'text-success',
+          'mt-2.5 text-3xl font-bold tabular-nums tracking-tight',
+          ton === 'success' && 'text-emerald-600',
           ton === 'danger' && 'text-danger',
           ton === 'neutre' && 'text-ink-900',
         )}
       >
-        {valeur ?? <span className="inline-block h-6 w-10 rounded-xs bg-ink-100 align-middle animate-pulse-soft" />}
+        {valeur ?? <span className="inline-block h-7 w-12 rounded bg-ink-100 align-middle animate-pulse-soft" />}
       </p>
-      {note && <p className="mt-1 text-xs text-ink-400">{note}</p>}
+      {note && <p className="mt-1.5 text-xs text-ink-400">{note}</p>}
     </div>
   );
 }

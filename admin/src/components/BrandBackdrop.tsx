@@ -46,31 +46,27 @@ export function BrandBackdrop({ children, width = 'md', className }: BrandBackdr
         width={736}
         height={736}
         decoding="async"
-        className="pointer-events-none absolute inset-0 size-full object-cover opacity-[0.11]"
+        className="pointer-events-none absolute inset-0 size-full object-cover filter brightness-110 contrast-105 opacity-60"
       />
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            'linear-gradient(to bottom, var(--color-brand-950) 0%, transparent 40%, var(--color-brand-950) 100%)',
-        }}
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand-950/75 via-brand-950/45 to-brand-950/85 backdrop-blur-[2px]"
       />
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-[38%] size-[42rem] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-70"
+        className="pointer-events-none absolute left-1/2 top-[38%] size-[48rem] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-60 filter blur-2xl"
         style={{
-          background: 'radial-gradient(circle, var(--color-brand-900) 0%, transparent 68%)',
+          background: 'radial-gradient(circle, var(--color-brand-600) 0%, transparent 65%)',
         }}
       />
 
-      <main className={cn('relative w-full animate-rise', widths[width], className)}>
+      <main className={cn('relative z-20 w-full animate-rise', widths[width], className)}>
         {children}
       </main>
 
-      <p className="relative mt-10 text-xs text-brand-400" data-numeric>
+      <p className="relative z-20 mt-10 text-xs font-medium text-emerald-300 drop-shadow" data-numeric>
         Administration · Version {ADMIN_VERSION}
       </p>
     </div>
