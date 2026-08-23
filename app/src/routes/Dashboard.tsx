@@ -27,29 +27,29 @@ export function Dashboard({ connection, onRefresh, isRefreshing }: DashboardProp
   return (
     <div className="mx-auto max-w-5xl px-8 py-7">
       {/* Hero Banner Immersif avec Photo d'Ingénierie */}
-      <div className="relative mb-8 overflow-hidden rounded-2xl border border-white/10 bg-brand-950 shadow-overlay">
+      <div className="relative mb-8 overflow-hidden rounded-2xl border border-emerald-500/20 bg-emerald-950 shadow-overlay">
         <img
           src="/photos/fraisier-aspersion.jpg"
           alt="Irrigation par aspersion"
-          className="pointer-events-none absolute inset-0 size-full object-cover opacity-35"
+          className="pointer-events-none absolute inset-0 size-full object-cover filter brightness-110 contrast-105 opacity-65"
         />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-950 via-brand-950/80 to-transparent" />
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-emerald-950/90 via-emerald-950/65 to-transparent" />
         
         <div className="relative p-7 sm:p-9">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/20 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-brand-300 backdrop-blur-md border border-brand-400/20">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/30 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-emerald-200 backdrop-blur-md border border-emerald-400/30 shadow-sm">
               <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
               Plateforme d'Ingénierie
             </span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-2xs font-medium text-brand-200 backdrop-blur-md">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-2xs font-medium text-white backdrop-blur-md border border-white/20">
               14 Modules Certifiés
             </span>
           </div>
 
-          <h1 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+          <h1 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl drop-shadow-md">
             Tableau de bord
           </h1>
-          <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-brand-200/90 sm:text-base">
+          <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-emerald-100/90 sm:text-base drop-shadow">
             Conçu pour les ingénieurs agronomes, hydrauliciens et bureaux d'études. Pilotez vos chantiers d'irrigation et générez vos notes de calcul professionnelles.
           </p>
 
@@ -57,7 +57,7 @@ export function Dashboard({ connection, onRefresh, isRefreshing }: DashboardProp
             <Button variant="primary" size="md" onClick={() => void navigate('/projets')}>
               <ProjectsIcon /> Ouvrir mes projets
             </Button>
-            <Button variant="secondary" size="md" className="border-white/20 bg-white/10 text-white hover:bg-white/20" onClick={() => void navigate('/calculs')}>
+            <Button variant="secondary" size="md" className="border-white/30 bg-white/15 text-white hover:bg-white/25 backdrop-blur-md" onClick={() => void navigate('/calculs')}>
               <CalculationsIcon /> Explorer les 14 modules
             </Button>
           </div>
@@ -161,17 +161,17 @@ function ModuleCategoryCard({
     <button
       type="button"
       onClick={onClick}
-      className="group relative flex h-36 flex-col justify-end overflow-hidden rounded-xl border border-ink-200/80 bg-brand-950 p-4 text-left shadow-subtle transition-all duration-200 hover:-translate-y-0.5 hover:border-brand-500 hover:shadow-raised"
+      className="group relative flex h-40 flex-col justify-end overflow-hidden rounded-2xl border border-emerald-500/20 bg-emerald-950 p-4 text-left shadow-subtle transition-all duration-300 hover:-translate-y-1 hover:border-emerald-400 hover:shadow-raised"
     >
       <img
         src={photo}
         alt={title}
-        className="pointer-events-none absolute inset-0 size-full object-cover opacity-40 transition-transform duration-500 group-hover:scale-110 group-hover:opacity-50"
+        className="pointer-events-none absolute inset-0 size-full object-cover filter brightness-105 contrast-105 opacity-70 transition-all duration-500 group-hover:scale-110 group-hover:opacity-85"
       />
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-brand-950 via-brand-950/50 to-transparent" />
-      <div className="relative">
-        <h3 className="text-sm font-semibold text-white group-hover:text-brand-300 transition-colors">{title}</h3>
-        <p className="mt-0.5 text-2xs text-brand-200/80 line-clamp-1">{subtitle}</p>
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-t from-emerald-950/95 via-emerald-950/40 to-transparent" />
+      <div className="relative z-10">
+        <h3 className="text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors drop-shadow-sm">{title}</h3>
+        <p className="mt-0.5 text-2xs text-emerald-100/80 line-clamp-1">{subtitle}</p>
       </div>
     </button>
   );

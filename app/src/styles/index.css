@@ -14,18 +14,18 @@
    ========================================================================== */
 
 @theme {
-  /* --- Marque : bleu-vert profond ---------------------------------------- */
-  --color-brand-50: #eef6f6;
-  --color-brand-100: #d4e9e9;
-  --color-brand-200: #a9d2d4;
-  --color-brand-300: #74b4b8;
-  --color-brand-400: #45949a;
-  --color-brand-500: #2b787f;
-  --color-brand-600: #1f6067;
-  --color-brand-700: #1a4d54;
-  --color-brand-800: #163e45;
-  --color-brand-900: #123239;
-  --color-brand-950: #0b2229;
+  /* --- Marque : Vert Émeraude Agronomique & Forêt Vibrant ------------------ */
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+  --color-brand-950: #022c22;
 
   /* --- Neutres froids : texte, bordures, fonds ---------------------------- */
   --color-ink-900: #0e191d; /* titres */

@@ -32,32 +32,31 @@ export function BrandBackdrop({ children, width = 'md', className }: BrandBackdr
       data-surface="dark"
       className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-brand-950 px-6 py-10"
     >
-      {/* Carrousel diagonal animé d'installations hydrauliques & agricoles en arrière-plan */}
-      <div className="pointer-events-none absolute inset-0 opacity-25">
-        <DiagonalMarqueeCarousel angle={-15} baseSpeed={80} />
+      {/* Carrousel diagonal animé d'installations hydrauliques & agricoles - HAUTE VISIBILITÉ */}
+      <div className="pointer-events-none absolute inset-0 opacity-65 transition-opacity duration-1000">
+        <DiagonalMarqueeCarousel angle={-15} baseSpeed={75} />
       </div>
 
-      {/* Voile de lisibilité & dégradé sombre de marque */}
+      {/* Voile de lisibilité & dégradé lumineux de marque avec effet dépoli */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand-950/95 via-brand-950/80 to-brand-950/95"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand-950/75 via-brand-950/45 to-brand-950/85 backdrop-blur-[2px]"
       />
 
-      {/* Halo unique et sourd derrière la marque : donne de la profondeur à un
-          fond plat sans devenir un dégradé décoratif. */}
+      {/* Halo émeraude éclatant derrière la marque : apporte une vraie lumière agronomique */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-[38%] size-[42rem] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-70"
+        className="pointer-events-none absolute left-1/2 top-[38%] size-[48rem] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-60 filter blur-2xl"
         style={{
-          background: 'radial-gradient(circle, var(--color-brand-900) 0%, transparent 68%)',
+          background: 'radial-gradient(circle, var(--color-brand-600) 0%, transparent 65%)',
         }}
       />
 
-      <main className={cn('relative w-full animate-rise', widths[width], className)}>
+      <main className={cn('relative z-20 w-full animate-rise', widths[width], className)}>
         {children}
       </main>
 
-      <p className="relative mt-10 text-xs text-brand-400" data-numeric>
+      <p className="relative z-20 mt-10 text-xs font-medium text-emerald-300 drop-shadow" data-numeric>
         Version {APP_VERSION}
       </p>
     </div>

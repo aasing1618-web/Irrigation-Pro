@@ -74,18 +74,18 @@ const Card = ({ card, className }: { card: CardItem; className?: string }) => {
   return (
     <div
       className={cn(
-        'group relative h-[220px] w-[320px] shrink-0 cursor-pointer overflow-hidden rounded-xl border border-white/10 shadow-2xl transition-transform duration-300 hover:scale-105',
+        'group relative h-[240px] w-[340px] shrink-0 cursor-pointer overflow-hidden rounded-2xl border border-emerald-400/30 shadow-2xl transition-all duration-500 hover:scale-105 hover:border-emerald-300 hover:shadow-emerald-500/20',
         className,
       )}
     >
       <img
         src={card.url}
         alt={card.title}
-        className="size-full object-cover transition-transform duration-700 group-hover:scale-110"
+        className="size-full object-cover filter brightness-105 contrast-105 transition-transform duration-700 group-hover:scale-110"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-brand-950/90 via-brand-950/20 to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
-      <div className="absolute bottom-3 left-3 right-3">
-        <span className="inline-block rounded bg-brand-900/80 px-2 py-1 text-2xs font-semibold text-white backdrop-blur-md border border-white/10">
+      <div className="absolute inset-0 bg-gradient-to-t from-emerald-950/80 via-emerald-950/20 to-transparent opacity-70 transition-opacity group-hover:opacity-40" />
+      <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between">
+        <span className="inline-block rounded-lg bg-emerald-950/85 px-3 py-1.5 text-xs font-semibold text-emerald-100 backdrop-blur-md border border-emerald-400/30 shadow-md">
           {card.title}
         </span>
       </div>

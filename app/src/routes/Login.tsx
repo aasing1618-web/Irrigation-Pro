@@ -72,7 +72,7 @@ export function Login() {
     <BrandBackdrop width="sm">
       <BrandLockup as="plain" compact />
 
-      <section className="mt-7 rounded-xl border border-ink-100 bg-surface p-6 shadow-overlay">
+      <section className="mt-7 rounded-2xl border border-white/50 bg-white/92 p-7 shadow-2xl backdrop-blur-xl transition-all duration-300">
         <header>
           <h1 className="text-xl font-semibold tracking-[-0.02em] text-ink-900">Connexion</h1>
           <p className="mt-1.5 text-sm text-ink-500">
