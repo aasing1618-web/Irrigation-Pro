@@ -8,10 +8,11 @@
  * fait qu'un lancement de logiciel paraît continu plutôt que saccadé.
  */
 
-import { useEffect, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { cn } from '../lib/cn';
 import { APP_VERSION } from '../lib/version';
 import { BrandMark } from './icons';
+import DiagonalMarqueeCarousel from './ui/great-ui-diagonal-marquee-carousel';
 
 export interface BrandBackdropProps {
   children: ReactNode;
@@ -25,48 +26,21 @@ const widths = {
   md: 'max-w-[30rem]',
 };
 
-const BACKGROUND_PHOTOS = [
-  { src: '/photos/fraisier-aspersion.jpg', legend: 'Irrigation par aspersion' },
-  { src: '/photos/aspersion-moderne.jpg', legend: 'Systèmes de couverture intégrale' },
-  { src: '/photos/champ-mais.jpg', legend: 'Grandes cultures & Besoins agronomiques' },
-  { src: '/photos/rizicoles-irrigation.jpg', legend: 'Hydraulique des canaux et grands périmètres' },
-  { src: '/photos/pompage-solaire.jpg', legend: 'Pompage hydraulique & Énergie solaire' },
-];
-
 export function BrandBackdrop({ children, width = 'md', className }: BrandBackdropProps) {
-  const [photoIndex, setPhotoIndex] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setPhotoIndex((prev) => (prev + 1) % BACKGROUND_PHOTOS.length);
-    }, 7000);
-    return () => clearInterval(timer);
-  }, []);
-
   return (
     <div
       data-surface="dark"
       className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-brand-950 px-6 py-10"
     >
-      {/* Diaporama photo en fond immersif */}
-      {BACKGROUND_PHOTOS.map((photo, idx) => (
-        <img
-          key={photo.src}
-          src={photo.src}
-          alt=""
-          aria-hidden="true"
-          decoding="async"
-          className={cn(
-            'pointer-events-none absolute inset-0 size-full object-cover transition-opacity duration-1000 ease-in-out',
-            idx === photoIndex ? 'opacity-[0.22] scale-105 transition-transform duration-[8000ms]' : 'opacity-0 scale-100',
-          )}
-        />
-      ))}
+      {/* Carrousel diagonal animé d'installations hydrauliques & agricoles en arrière-plan */}
+      <div className="pointer-events-none absolute inset-0 opacity-25">
+        <DiagonalMarqueeCarousel angle={-15} baseSpeed={80} />
+      </div>
 
-      {/* Voile de lisibilité & dégradé radial de marque */}
+      {/* Voile de lisibilité & dégradé sombre de marque */}
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand-950/90 via-brand-950/70 to-brand-950/95"
+        className="pointer-events-none absolute inset-0 bg-gradient-to-b from-brand-950/95 via-brand-950/80 to-brand-950/95"
       />
 
       {/* Halo unique et sourd derrière la marque : donne de la profondeur à un
