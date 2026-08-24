@@ -6,7 +6,6 @@
  * semblant d'avoir du contenu : ils annoncent ce qui arrive.
  */
 
-import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import { Card } from '../components/Card';
@@ -27,7 +26,6 @@ export interface DashboardProps {
 
 export function Dashboard({ connection, onRefresh, isRefreshing }: DashboardProps) {
   const navigate = useNavigate();
-  const [selectedPhoto, setSelectedPhoto] = useState('/photos/aspersion-moderne.jpg');
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-7">
@@ -143,45 +141,22 @@ export function Dashboard({ connection, onRefresh, isRefreshing }: DashboardProp
             />
           </Card>
 
-          {/* Bandeau Photo Galerie de Terrain avec Effet WebGL Water Ripple */}
-          <Card title="Simulateur d'Ondulation & Galerie de Terrain" className="overflow-hidden">
-            <div className="relative mb-3 h-48 w-full overflow-hidden rounded-xl border border-emerald-500/20 bg-brand-950">
+          {/* Carte Visuelle Ondulée Centrée avec Nature Heals */}
+          <Card title="Aperçu Hydraulique Ondulé" className="overflow-hidden">
+            <div className="relative h-64 w-full overflow-hidden rounded-xl border border-emerald-500/20 bg-brand-950">
               <WaterRippleImage
-                src={selectedPhoto}
-                blueish={0.5}
+                src="/photos/Nature_Heals_Quietly___Organic_Heal.jpeg"
+                blueish={0.4}
                 scale={6}
-                illumination={0.16}
-                surfaceDistortion={0.06}
+                illumination={0.18}
+                surfaceDistortion={0.05}
                 waterDistortion={0.03}
                 className="size-full"
               />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-brand-950/90 via-brand-950/40 to-transparent p-3">
-                <span className="text-xs font-semibold text-white">Visualisation WebGL active</span>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-brand-950/90 via-brand-950/30 to-transparent p-4 flex items-center justify-between">
+                <span className="text-xs font-semibold text-emerald-300">Animation WebGL Centrée</span>
+                <span className="text-2xs text-white/80">Nature & Écosystème Irrigué</span>
               </div>
-            </div>
-
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { photo: '/photos/goutte-a-goutte.jpg', label: 'Goutte-à-goutte' },
-                { photo: '/photos/bassin-stockage.jpg', label: 'Bassin' },
-                { photo: '/photos/aspersion-moderne.jpg', label: 'Aspersion' },
-                { photo: '/photos/canal-pompage.jpg', label: 'Pompage' },
-              ].map((item) => (
-                <button
-                  key={item.photo}
-                  type="button"
-                  onClick={() => setSelectedPhoto(item.photo)}
-                  className={`group relative h-16 overflow-hidden rounded-lg border transition-all ${
-                    selectedPhoto === item.photo
-                      ? 'border-emerald-400 ring-2 ring-emerald-400/40'
-                      : 'border-white/10 hover:border-white/30'
-                  }`}
-                >
-                  <img src={item.photo} alt={item.label} className="size-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-brand-950/80 via-transparent to-transparent" />
-                  <span className="absolute bottom-1 left-1.5 text-[10px] font-medium text-white truncate max-w-[90%]">{item.label}</span>
-                </button>
-              ))}
             </div>
           </Card>
         </div>

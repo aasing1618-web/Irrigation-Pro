@@ -108,30 +108,20 @@ void main() {
   vec2 img_uv = vUv;
   img_uv -= .5;
   if (u_ratio > u_img_ratio) {
-    img_uv.x = img_uv.x * u_ratio / u_img_ratio;
+    img_uv.y = img_uv.y * (u_img_ratio / u_ratio);
   } else {
-    img_uv.y = img_uv.y * u_img_ratio / u_ratio;
+    img_uv.x = img_uv.x * (u_ratio / u_img_ratio);
   }
-  float scale_factor = 1.4;
-  img_uv *= scale_factor;
   img_uv += .5;
   img_uv.y = 1. - img_uv.y;
 
-  img_uv += (u_water_distortion * outer_noise);
-  img_uv += (u_surface_distortion * surf);
+  vec2 distorted_uv = img_uv + (u_water_distortion * outer_noise) + (u_surface_distortion * surf);
 
-  vec4 img = texture2D(u_image_texture, img_uv);
+  vec4 img = texture2D(u_image_texture, clamp(distorted_uv, 0.0, 1.0));
   img *= (1. + u_illumination * surf);
 
-  color += img.rgb;
-  color += u_illumination * vec3(1. - u_blueish, 1., 1.) * surf;
-  opacity += img.a;
-
-  float edge_width = .02;
-  float edge_alpha = smoothstep(0., edge_width, img_uv.x) * smoothstep(1., 1. - edge_width, img_uv.x);
-  edge_alpha *= smoothstep(0., edge_width, img_uv.y) * smoothstep(1., 1. - edge_width, img_uv.y);
-  color *= edge_alpha;
-  opacity *= edge_alpha;
+  color = img.rgb + u_illumination * vec3(1. - u_blueish, 1., 1.) * surf;
+  opacity = img.a;
 
   gl_FragColor = vec4(color, opacity);
 }
