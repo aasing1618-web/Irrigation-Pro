@@ -20,6 +20,8 @@ import { CalculationsIcon, ChevronRightIcon } from '../components/icons';
 import { useCalculModules } from '../hooks/useCalculs';
 import { cn } from '../lib/cn';
 import type { CalculModule } from '../lib/calculs';
+import { WaterRippleImage } from '../components/ui/water-ripple-image';
+import { ShaderBackground } from '../components/ui/oceanic-currents';
 
 /** Regroupe par famille quand le serveur en déclare une. */
 function byFamily(modules: CalculModule[]): Array<{ famille: string; modules: CalculModule[] }> {
@@ -49,16 +51,24 @@ export function Calculations() {
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-7">
-      {/* En-tête illustré */}
-      <div className="relative mb-7 overflow-hidden rounded-2xl border border-ink-200/80 bg-brand-950 p-6 shadow-raised">
-        <img
-          src="/photos/outils-maraichage.jpg"
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 size-full object-cover opacity-25"
-        />
+      {/* En-tête illustré WebGL Water Ripple & Shader */}
+      <div className="relative mb-7 overflow-hidden rounded-2xl border border-ink-200/80 bg-brand-950 p-6 shadow-raised min-h-[10rem]">
+        <div className="pointer-events-none absolute inset-0 opacity-40">
+          <WaterRippleImage
+            src="/photos/outils-maraichage.jpg"
+            blueish={0.5}
+            scale={6}
+            illumination={0.15}
+            surfaceDistortion={0.05}
+            waterDistortion={0.03}
+            className="size-full"
+          />
+        </div>
+        <div className="pointer-events-none absolute inset-0 opacity-25 mix-blend-screen">
+          <ShaderBackground className="size-full" />
+        </div>
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-950 via-brand-950/90 to-transparent" />
-        <div className="relative">
+        <div className="relative z-10">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/20 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-brand-300 backdrop-blur-md border border-brand-400/20">
             14 Modules Embarqués
           </span>

@@ -13,6 +13,8 @@ import { cn } from '../lib/cn';
 import { APP_VERSION } from '../lib/version';
 import { BrandMark } from './icons';
 import DiagonalMarqueeCarousel from './ui/great-ui-diagonal-marquee-carousel';
+import { ShaderBackground } from './ui/oceanic-currents';
+import { HandwritingSvg } from './ui/handwriting-svg';
 
 export interface BrandBackdropProps {
   children: ReactNode;
@@ -32,8 +34,13 @@ export function BrandBackdrop({ children, width = 'md', className }: BrandBackdr
       data-surface="dark"
       className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-brand-950 px-6 py-10"
     >
+      {/* Fond WebGL Shader de courants d'eau fluides ("vue mer / oceanic currents") */}
+      <div className="pointer-events-none absolute inset-0 opacity-40 mix-blend-screen">
+        <ShaderBackground className="size-full" />
+      </div>
+
       {/* Carrousel diagonal animé d'installations hydrauliques & agricoles - HAUTE VISIBILITÉ */}
-      <div className="pointer-events-none absolute inset-0 opacity-65 transition-opacity duration-1000">
+      <div className="pointer-events-none absolute inset-0 opacity-55 transition-opacity duration-1000">
         <DiagonalMarqueeCarousel angle={-15} baseSpeed={75} />
       </div>
 
@@ -111,6 +118,15 @@ export function BrandLockup({
           Irrigation Pro
         </p>
       )}
+      <HandwritingSvg
+        text="Hydraulique & Agronomie"
+        width={220}
+        height={32}
+        fontSize={22}
+        strokeWidth={1.5}
+        duration={2.2}
+        className="mt-1 text-emerald-400 opacity-90"
+      />
       {tagline && <p className="mt-1.5 text-sm text-brand-300">{tagline}</p>}
     </div>
   );

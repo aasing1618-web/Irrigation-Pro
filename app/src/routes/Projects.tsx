@@ -45,6 +45,8 @@ import {
   type Project,
   type ProjectStatus,
 } from '../lib/projects';
+import { WaterRippleImage } from '../components/ui/water-ripple-image';
+import { ShaderBackground } from '../components/ui/oceanic-currents';
 
 type StatusFilter = ProjectStatus | 'TOUS';
 type SortOrder = 'MODIFIE' | 'CREE' | 'NOM';
@@ -100,16 +102,24 @@ export function Projects() {
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-7">
-      {/* En-tête illustré Projets */}
-      <div className="relative mb-7 overflow-hidden rounded-2xl border border-ink-200/80 bg-brand-950 p-6 shadow-raised">
-        <img
-          src="/photos/rizicoles-irrigation.jpg"
-          alt=""
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 size-full object-cover opacity-25"
-        />
+      {/* En-tête illustré WebGL Projets */}
+      <div className="relative mb-7 overflow-hidden rounded-2xl border border-ink-200/80 bg-brand-950 p-6 shadow-raised min-h-[10rem]">
+        <div className="pointer-events-none absolute inset-0 opacity-45">
+          <WaterRippleImage
+            src="/photos/rizicoles-irrigation.jpg"
+            blueish={0.55}
+            scale={6.5}
+            illumination={0.16}
+            surfaceDistortion={0.06}
+            waterDistortion={0.03}
+            className="size-full"
+          />
+        </div>
+        <div className="pointer-events-none absolute inset-0 opacity-25 mix-blend-screen">
+          <ShaderBackground className="size-full" />
+        </div>
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-brand-950 via-brand-950/90 to-transparent" />
-        <div className="relative flex flex-wrap items-center justify-between gap-4">
+        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4">
           <div>
             <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-500/20 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-brand-300 backdrop-blur-md border border-brand-400/20">
               Gestion de Chantiers

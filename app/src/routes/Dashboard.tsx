@@ -6,6 +6,7 @@
  * semblant d'avoir du contenu : ils annoncent ce qui arrive.
  */
 
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 
 import { Card } from '../components/Card';
@@ -14,6 +15,9 @@ import { StatusBadge, type StatusTone } from '../components/StatusBadge';
 import { Button } from '../components/Button';
 import { CalculationsIcon, ProjectsIcon, RetryIcon, ServerIcon } from '../components/icons';
 import type { ConnectionState, HealthResponse } from '../hooks/useHealth';
+import { WaterRippleImage } from '../components/ui/water-ripple-image';
+import { ShaderBackground } from '../components/ui/oceanic-currents';
+import { HandwritingSvg } from '../components/ui/handwriting-svg';
 
 export interface DashboardProps {
   connection: ConnectionState;
@@ -23,32 +27,57 @@ export interface DashboardProps {
 
 export function Dashboard({ connection, onRefresh, isRefreshing }: DashboardProps) {
   const navigate = useNavigate();
+  const [selectedPhoto, setSelectedPhoto] = useState('/photos/aspersion-moderne.jpg');
 
   return (
     <div className="mx-auto max-w-5xl px-8 py-7">
-      {/* Hero Banner Immersif avec Photo d'Ingénierie */}
-      <div className="relative mb-8 overflow-hidden rounded-2xl border border-emerald-500/20 bg-emerald-950 shadow-overlay">
-        <img
-          src="/photos/fraisier-aspersion.jpg"
-          alt="Irrigation par aspersion"
-          className="pointer-events-none absolute inset-0 size-full object-cover filter brightness-110 contrast-105 opacity-65"
-        />
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-emerald-950/90 via-emerald-950/65 to-transparent" />
+      {/* Hero Banner Immersif avec Water Ripple WebGL & Photo d'Ingénierie */}
+      <div className="relative mb-8 overflow-hidden rounded-2xl border border-emerald-500/20 bg-emerald-950 shadow-overlay min-h-[16rem]">
+        {/* WebGL Water Ripple Image background */}
+        <div className="pointer-events-none absolute inset-0 opacity-75">
+          <WaterRippleImage
+            src="/photos/fraisier-aspersion.jpg"
+            blueish={0.45}
+            scale={7}
+            illumination={0.18}
+            surfaceDistortion={0.06}
+            waterDistortion={0.03}
+            className="size-full"
+          />
+        </div>
+
+        {/* Ambient Oceanic Currents Shader Overlay */}
+        <div className="pointer-events-none absolute inset-0 opacity-30 mix-blend-screen">
+          <ShaderBackground className="size-full" />
+        </div>
+
+        <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-gradient-to-r from-emerald-950/95 via-emerald-950/75 to-transparent" />
         
-        <div className="relative p-7 sm:p-9">
+        <div className="relative z-10 p-7 sm:p-9">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/30 px-3 py-1 text-2xs font-semibold uppercase tracking-wider text-emerald-200 backdrop-blur-md border border-emerald-400/30 shadow-sm">
               <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Plateforme d'Ingénierie
+              Plateforme d'Ingénierie Ondulatoire & Hydraulique
             </span>
             <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-3 py-1 text-2xs font-medium text-white backdrop-blur-md border border-white/20">
               14 Modules Certifiés
             </span>
           </div>
 
-          <h1 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl drop-shadow-md">
-            Tableau de bord
-          </h1>
+          <div className="mt-3 flex items-center gap-4">
+            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl drop-shadow-md">
+              Tableau de bord
+            </h1>
+            <HandwritingSvg
+              text="Irrigation Pro"
+              width={200}
+              height={45}
+              fontSize={32}
+              strokeWidth={1.5}
+              duration={2.5}
+              className="hidden sm:block text-emerald-400"
+            />
+          </div>
           <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-emerald-100/90 sm:text-base drop-shadow">
             Conçu pour les ingénieurs agronomes, hydrauliciens et bureaux d'études. Pilotez vos chantiers d'irrigation et générez vos notes de calcul professionnelles.
           </p>
@@ -114,24 +143,45 @@ export function Dashboard({ connection, onRefresh, isRefreshing }: DashboardProp
             />
           </Card>
 
-          {/* Bandeau Photo Galerie de Terrain */}
-          <Card title="Galerie de terrain & Équipements" className="overflow-hidden">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="group relative h-28 overflow-hidden rounded-lg">
-                <img src="/photos/goutte-a-goutte.jpg" alt="Goutte-à-goutte" className="size-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-brand-950/80 via-transparent to-transparent" />
-                <span className="absolute bottom-2 left-2 text-2xs font-medium text-white">Goutte-à-goutte</span>
+          {/* Bandeau Photo Galerie de Terrain avec Effet WebGL Water Ripple */}
+          <Card title="Simulateur d'Ondulation & Galerie de Terrain" className="overflow-hidden">
+            <div className="relative mb-3 h-48 w-full overflow-hidden rounded-xl border border-emerald-500/20 bg-brand-950">
+              <WaterRippleImage
+                src={selectedPhoto}
+                blueish={0.5}
+                scale={6}
+                illumination={0.16}
+                surfaceDistortion={0.06}
+                waterDistortion={0.03}
+                className="size-full"
+              />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-brand-950/90 via-brand-950/40 to-transparent p-3">
+                <span className="text-xs font-semibold text-white">Visualisation WebGL active</span>
               </div>
-              <div className="group relative h-28 overflow-hidden rounded-lg">
-                <img src="/photos/bassin-stockage.jpg" alt="Bassin de stockage" className="size-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-brand-950/80 via-transparent to-transparent" />
-                <span className="absolute bottom-2 left-2 text-2xs font-medium text-white">Bassin de stockage</span>
-              </div>
-              <div className="group relative h-28 overflow-hidden rounded-lg">
-                <img src="/photos/outils-maraichage.jpg" alt="Outils maraîchage" className="size-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                <div className="absolute inset-0 bg-gradient-to-t from-brand-950/80 via-transparent to-transparent" />
-                <span className="absolute bottom-2 left-2 text-2xs font-medium text-white">Maraîchage pro</span>
-              </div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { photo: '/photos/goutte-a-goutte.jpg', label: 'Goutte-à-goutte' },
+                { photo: '/photos/bassin-stockage.jpg', label: 'Bassin' },
+                { photo: '/photos/aspersion-moderne.jpg', label: 'Aspersion' },
+                { photo: '/photos/canal-pompage.jpg', label: 'Pompage' },
+              ].map((item) => (
+                <button
+                  key={item.photo}
+                  type="button"
+                  onClick={() => setSelectedPhoto(item.photo)}
+                  className={`group relative h-16 overflow-hidden rounded-lg border transition-all ${
+                    selectedPhoto === item.photo
+                      ? 'border-emerald-400 ring-2 ring-emerald-400/40'
+                      : 'border-white/10 hover:border-white/30'
+                  }`}
+                >
+                  <img src={item.photo} alt={item.label} className="size-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-brand-950/80 via-transparent to-transparent" />
+                  <span className="absolute bottom-1 left-1.5 text-[10px] font-medium text-white truncate max-w-[90%]">{item.label}</span>
+                </button>
+              ))}
             </div>
           </Card>
         </div>
