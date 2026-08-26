@@ -101,7 +101,7 @@ export function Projects() {
   const filtering = debouncedSearch.trim() !== '' || statut !== 'TOUS';
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-7">
+    <div className="mx-auto max-w-5xl px-4 sm:px-8 py-4 sm:py-7">
       {/* En-tête illustré WebGL Projets */}
       <div className="relative mb-7 overflow-hidden rounded-2xl border border-ink-200/80 bg-brand-950 p-6 shadow-raised min-h-[10rem]">
         <div className="pointer-events-none absolute inset-0 opacity-45">

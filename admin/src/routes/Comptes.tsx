@@ -105,7 +105,7 @@ export function Comptes() {
   const dernierePage = Math.max(0, Math.ceil(total / PAR_PAGE) - 1);
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-7">
+    <div className="mx-auto max-w-5xl px-4 sm:px-8 py-4 sm:py-7">
       <PageHeader
         title="Comptes clients"
         description="Créez les accès de vos clients, suspendez-les, réactivez-les. C’est ici que se règle tout ce qui touche à leur connexion."

@@ -143,7 +143,7 @@ export function CalculRun() {
 }
 
 function Page({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto max-w-5xl px-8 py-7">{children}</div>;
+  return <div className="mx-auto max-w-5xl px-4 sm:px-8 py-4 sm:py-7">{children}</div>;
 }
 
 function ModuleRunner({ module, projectId }: { module: CalculModule; projectId: string | null }) {

@@ -323,3 +323,23 @@ export function EyeOffIcon(props: IconProps) {
     </Icon>
   );
 }
+
+/** Menu burger — « ouvrir la navigation ». */
+export function MenuIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M4 7.5h16M4 12h16M4 16.5h16" />
+    </Icon>
+  );
+}
+
+/** Croix de fermeture. */
+export function CloseIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m6.5 6.5 11 11M17.5 6.5l-11 11" />
+    </Icon>
+  );
+}
+
+

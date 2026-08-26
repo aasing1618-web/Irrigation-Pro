@@ -11,14 +11,14 @@
  * qu'on s'apprête à suspendre le compte de quelqu'un.
  */
 
-import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router';
+import { useState, useEffect } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router';
 
 import { useAuth } from '../auth/AuthProvider';
 import { cn } from '../lib/cn';
 import { ADMIN_VERSION } from '../lib/version';
 import { Button } from './Button';
-import { HomeIcon, LogoutIcon, UsersIcon, BrandMark } from './icons';
+import { HomeIcon, LogoutIcon, UsersIcon, BrandMark, MenuIcon, CloseIcon } from './icons';
 
 const NAV_ITEMS = [
   { to: '/', label: 'Accueil', icon: <HomeIcon /> },
@@ -26,10 +26,27 @@ const NAV_ITEMS = [
 ];
 
 export function AdminShell() {
+  const location = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
   return (
     <div className="flex h-full flex-col bg-canvas">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-6 border-b border-ink-100 bg-surface px-5">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-ink-100 bg-surface px-4 sm:px-5">
         <div className="flex items-center gap-2.5">
+          <button
+            type="button"
+            onClick={() => setMobileOpen((open) => !open)}
+            aria-label={mobileOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+            aria-expanded={mobileOpen}
+            className="inline-flex size-9 items-center justify-center rounded-md text-ink-700 hover:bg-ink-50 md:hidden"
+          >
+            {mobileOpen ? <CloseIcon className="text-xl" /> : <MenuIcon className="text-xl" />}
+          </button>
+
           <BrandMark className="text-[1.375rem] text-brand-600" />
           <span className="text-md font-semibold tracking-[-0.015em] text-ink-900">
             Irrigation Pro
@@ -40,8 +57,35 @@ export function AdminShell() {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1">
-        <Navigation />
+      <div className="relative flex min-h-0 flex-1">
+        {/* Navigation latérale permanente sur écran moyen et large (desktop) */}
+        <Navigation className="hidden md:flex" />
+
+        {/* Tiroir de navigation mobile avec voilette dépolie sur smartphone */}
+        {mobileOpen && (
+          <div className="fixed inset-0 z-50 flex md:hidden">
+            <div
+              aria-hidden="true"
+              className="fixed inset-0 bg-ink-950/60 backdrop-blur-xs transition-opacity"
+              onClick={() => setMobileOpen(false)}
+            />
+            <div className="relative flex w-72 max-w-[80vw] flex-1 flex-col bg-brand-950 shadow-overlay animate-rise">
+              <div className="flex h-14 items-center justify-between border-b border-white/10 px-4 text-white">
+                <span className="text-sm font-semibold">Administration</span>
+                <button
+                  type="button"
+                  onClick={() => setMobileOpen(false)}
+                  aria-label="Fermer le menu"
+                  className="rounded-md p-1.5 text-brand-300 hover:bg-white/10 hover:text-white"
+                >
+                  <CloseIcon className="text-lg" />
+                </button>
+              </div>
+              <Navigation className="w-full flex-1" onNavClick={() => setMobileOpen(false)} />
+            </div>
+          </div>
+        )}
+
         <main className="min-w-0 flex-1 overflow-y-auto">
           <Outlet />
         </main>
@@ -50,12 +94,12 @@ export function AdminShell() {
   );
 }
 
-function Navigation() {
+function Navigation({ onNavClick, className }: { onNavClick?: () => void; className?: string } = {}) {
   return (
     <nav
       data-surface="dark"
       aria-label="Navigation principale"
-      className="flex w-56 shrink-0 flex-col bg-brand-950 text-brand-100"
+      className={cn('flex w-56 shrink-0 flex-col bg-brand-950 text-brand-100', className)}
     >
       <p className="px-5 pb-2.5 pt-5 text-2xs font-semibold uppercase tracking-[0.11em] text-brand-400">
         Gestion des comptes
@@ -67,6 +111,7 @@ function Navigation() {
             <NavLink
               to={item.to}
               end={item.to === '/'}
+              onClick={onNavClick}
               className={({ isActive }) =>
                 cn(
                   'group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-base',
@@ -117,6 +162,7 @@ function Navigation() {
     </nav>
   );
 }
+
 
 /** Qui est connecté, et comment partir. */
 function AccountBlock() {

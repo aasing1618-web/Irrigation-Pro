@@ -28,7 +28,7 @@ export function Dashboard({ connection, onRefresh, isRefreshing }: DashboardProp
   const navigate = useNavigate();
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-7">
+    <div className="mx-auto max-w-5xl px-4 sm:px-8 py-4 sm:py-7">
       {/* Hero Banner Immersif avec Water Ripple WebGL & Photo d'Ingénierie */}
       <div className="relative mb-8 overflow-hidden rounded-2xl border border-emerald-500/20 bg-emerald-950 shadow-overlay min-h-[16rem]">
         {/* WebGL Water Ripple Image background */}

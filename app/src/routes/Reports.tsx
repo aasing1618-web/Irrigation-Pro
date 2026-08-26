@@ -21,7 +21,7 @@ export function Reports() {
   const navigate = useNavigate();
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-7">
+    <div className="mx-auto max-w-5xl px-4 sm:px-8 py-4 sm:py-7">
       {/* En-tête illustré Rapports */}
       <div className="relative mb-7 overflow-hidden rounded-2xl border border-ink-200/80 bg-brand-950 p-6 shadow-raised">
         <img

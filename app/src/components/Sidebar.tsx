@@ -40,12 +40,17 @@ export const NAV_ITEMS: NavItem[] = [
   { to: '/parametres', label: 'Paramètres', icon: <SettingsIcon /> },
 ];
 
-export function Sidebar() {
+export interface SidebarProps {
+  onNavClick?: () => void;
+  className?: string;
+}
+
+export function Sidebar({ onNavClick, className }: SidebarProps = {}) {
   return (
     <nav
       data-surface="dark"
       aria-label="Navigation principale"
-      className="flex w-60 shrink-0 flex-col bg-brand-950 text-brand-100"
+      className={cn('flex w-60 shrink-0 flex-col bg-brand-950 text-brand-100', className)}
     >
       <p className="px-5 pb-2.5 pt-5 text-2xs font-semibold uppercase tracking-[0.11em] text-brand-400">
         Espace de travail
@@ -57,7 +62,9 @@ export function Sidebar() {
             <NavLink
               to={item.to}
               end={item.to === '/'}
+              onClick={onNavClick}
               className={({ isActive }) =>
+
                 cn(
                   'group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-base',
                   'transition-colors duration-150 ease-out-quart',

@@ -43,7 +43,7 @@ export function Accueil() {
   const stats = query.data?.statistiques;
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-7">
+    <div className="mx-auto max-w-5xl px-4 sm:px-8 py-4 sm:py-7">
       {/* Hero Banner Administration avec Photo d'Ingénierie */}
       <div className="relative mb-8 overflow-hidden rounded-2xl border border-emerald-500/20 bg-emerald-950 shadow-overlay">
         <img

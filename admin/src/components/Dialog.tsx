@@ -111,7 +111,7 @@ export function Dialog({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-6 sm:p-10">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-3 sm:p-6 sm:p-10">
       {/* Voile : cliquer à côté ferme — sauf quand la fenêtre porte une valeur
           qu'on ne peut pas réafficher. */}
       <div

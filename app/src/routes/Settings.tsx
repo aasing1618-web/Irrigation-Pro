@@ -25,7 +25,7 @@ export function Settings() {
   const { user } = useAuth();
 
   return (
-    <div className="mx-auto max-w-5xl px-8 py-7">
+    <div className="mx-auto max-w-5xl px-4 sm:px-8 py-4 sm:py-7">
       <PageHeader
         title="Paramètres"
         description="Votre compte, votre mot de passe et les réglages appliqués par défaut à vos nouveaux projets."
